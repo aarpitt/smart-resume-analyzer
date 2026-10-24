@@ -164,8 +164,10 @@ class ATSAnalyzer:
 
         # Composite ATS Score:
         # 60% Required Skills Match + 20% Recommended Skills Match + 20% TF-IDF Cosine Similarity
-        composite_score = (0.60 * req_pct) + (0.20 * rec_pct) + (0.20 * tfidf_pct)
-        composite_score = round(max(0, min(100, composite_score)))
+        req_points = round(0.60 * req_pct, 1)
+        rec_points = round(0.20 * rec_pct, 1)
+        tfidf_points = round(0.20 * tfidf_pct, 1)
+        composite_score = round(max(0, min(100, (0.60 * req_pct) + (0.20 * rec_pct) + (0.20 * tfidf_pct))))
 
         # Categorize matched skills for dashboard display
         categorized_matched = {}
@@ -191,5 +193,14 @@ class ATSAnalyzer:
             "missing_recommended_skills": [s.title() for s in missing_recommended],
             "all_extracted_skills": [s.title() for s in extracted_skills],
             "other_detected_skills": [s.title() for s in other_skills],
-            "categorized_matched_skills": categorized_matched
+            "categorized_matched_skills": categorized_matched,
+            "weights": {
+                "required_weight": 60,
+                "recommended_weight": 20,
+                "tfidf_weight": 20,
+                "required_points": req_points,
+                "recommended_points": rec_points,
+                "tfidf_points": tfidf_points,
+                "formula_text": f"60% × {round(req_pct, 1)}% ({req_points} pts) + 20% × {round(rec_pct, 1)}% ({rec_points} pts) + 20% × {tfidf_pct}% ({tfidf_points} pts) = {composite_score}%"
+            }
         }

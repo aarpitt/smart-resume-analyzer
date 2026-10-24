@@ -106,10 +106,10 @@ class FeedbackGenerator:
                 deductions_summary.append(f"{sec_data.get('title')}: {d}")
 
         system_prompt = (
-            "You are a Senior Technical Recruiter and AI Resume Advisor. "
+            "You are a Senior Technical Recruiter and AI Resume Advisor.\n"
             "Analyze the candidate's automated resume evaluation diagnostics and generate 3 to 5 "
             "high-impact, actionable, and explainable recommendations.\n\n"
-            "CRITICAL RULES:\n"
+            "STRICT RULES & CONSTRAINTS:\n"
             "1. Output MUST be a valid JSON object with root key 'recommendations' containing a list of objects.\n"
             "2. Each object must have these exact keys:\n"
             "   - 'category': One of ['Role Alignment', 'Technical Skills', 'Projects', 'Work Experience', 'Education', 'Contact Details', 'Resume Structure', 'Impact & Metrics']\n"
@@ -117,8 +117,12 @@ class FeedbackGenerator:
             "   - 'title': Concise actionable title (under 10 words)\n"
             "   - 'evidence': Clear factual summary of what was found or missing in the resume\n"
             "   - 'action': Concrete instruction on how to address this gap.\n"
-            "3. ACADEMIC INTEGRITY: Never invent fictional job positions, companies, or falsified accomplishments. "
-            "Advise the candidate on how to authentically showcase their real skills, projects, and coursework."
+            "3. ZERO FABRICATION & STRICT ACADEMIC INTEGRITY:\n"
+            "   - NEVER fabricate or invent fictional past job titles, employers, companies, dates, or degrees.\n"
+            "   - NEVER fabricate specific numerical metrics or statistics (do NOT suggest 'state that you reduced latency by 35%' or 'claim $1M in sales').\n"
+            "   - Instead, guide the candidate to calculate and quantify their OWN real-world results using frameworks like Google X-Y-Z: 'Accomplished [X] as measured by [Y], by doing [Z]'.\n"
+            "   - If suggesting missing tools, always frame as conditional: 'If you have coursework, personal projects, or lab experience with [Skill], explicitly document it...'.\n"
+            "   - Emphasize authentic, truthful presentation of the candidate's real capabilities."
         )
 
         user_content = (
@@ -375,5 +379,24 @@ class FeedbackGenerator:
         # Sort recommendations by severity: High first, then Medium, then Low
         severity_order = {"High": 1, "Medium": 2, "Low": 3}
         recommendations.sort(key=lambda r: severity_order.get(r.get("severity", "Low"), 4))
+
+        # If profile has zero detected deficiencies (exceptional resume), provide advanced career enhancement advice
+        if not recommendations:
+            recommendations.append({
+                "category": "Role Alignment",
+                "severity": "Low",
+                "title": f"Pursue Advanced Specializations for {ats_result.get('target_role')}",
+                "evidence": f"Your resume demonstrates comprehensive alignment ({scoring_result.get('overall_score')}/100) with all core requirements for {ats_result.get('target_role')}.",
+                "action": "Consider highlighting technical articles, open-source library contributions, or system architecture case studies to further elevate your profile.",
+                "source": "Rule-Based Engine"
+            })
+            recommendations.append({
+                "category": "Impact & Metrics",
+                "severity": "Low",
+                "title": "Highlight Long-Term System & Business ROI",
+                "evidence": "All baseline structural sections, technical depth, and contact standards are fully satisfied.",
+                "action": "For senior technical evaluations, ensure project descriptions emphasize operational reliability, team leadership, and measurable business impact.",
+                "source": "Rule-Based Engine"
+            })
 
         return recommendations

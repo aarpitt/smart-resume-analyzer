@@ -325,7 +325,16 @@ This repository includes turnkey deployment configuration for [Render](https://r
    - **Environment**: Python
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `gunicorn wsgi:app`
-5. Click **Deploy Web Service**.
+5. In the **Environment Variables** section, configure:
+   - `GROQ_API_KEY`: Your Groq Cloud API key (required for AI feedback; system automatically falls back to rule-based engine if omitted).
+   - `GROQ_MODEL`: (Optional) e.g. `openai/gpt-oss-20b` or `qwen/qwen3.8-27b`.
+   - `FLASK_DEBUG`: `false`
+6. Click **Deploy Web Service**.
+
+### SQLite Limitations on Ephemeral Hosting:
+Render's free web service instances run on an **ephemeral disk**. This means the default local SQLite database (`instance/resume_analyzer.db`) will reset whenever the web service restarts, sleeps from inactivity, or redeploys.
+- **For Academic Demonstration**: Ephemeral SQLite is completely suitable, lightweight, and requires zero external database provisioning.
+- **For Permanent Production Persistence**: Simply provision a free Render PostgreSQL database and add `DATABASE_URL` to your service environment variables. The application will automatically detect PostgreSQL and persist analysis records permanently.
 
 ---
 

@@ -1,6 +1,8 @@
 """
 Resume Scoring Engine.
 Calculates a transparent, explainable score out of 100 across 6 foundational resume dimensions.
+Calibrated to reward meaningful content depth, quantifiable impact, and structural richness
+rather than mere presence of section headings.
 Note: Scores are illustrative educational heuristics, not definitive claims about actual recruiter decisions.
 """
 
@@ -16,14 +18,15 @@ class ResumeScorer:
     - Contact Information (15 pts)
     - Education (15 pts)
     - Technical Skills (20 pts)
-    - Projects (20 pts)
+    - Projects & Portfolio (20 pts)
     - Work Experience (15 pts)
     - Resume Structure & Impact (15 pts)
     """
 
     DISCLAIMER = (
         "This score is an illustrative heuristic based on standard resume formatting "
-        "and ATS best practices. It does not reflect or guarantee actual recruiter decisions."
+        "and ATS best practices. It evaluates content depth, structure, and keyword relevance. "
+        "It does not reflect or guarantee actual recruiter decisions."
     )
 
     DEGREE_PATTERNS = [
@@ -93,10 +96,8 @@ class ResumeScorer:
             structure_score["score"]
         )
 
-        # Cap between 0 and 100
         total_score = max(0, min(100, round(total_score)))
 
-        # Tier grading
         if total_score >= 85:
             grade = "A"
             tier = "Strong Profile"
@@ -155,13 +156,13 @@ class ResumeScorer:
             reasons.append("GitHub profile link present.")
         if contact.get("portfolio"):
             links_found += 1
-            reasons.append("Portfolio / personal website link present.")
+            reasons.append("Portfolio link present.")
 
         if links_found >= 2:
             score += 4
         elif links_found == 1:
-            score += 3
-            deductions.append("Only one professional link provided; adding both LinkedIn and GitHub strengthens technical profiles.")
+            score += 2
+            deductions.append("Only one professional link provided; including both LinkedIn and GitHub strengthens technical profiles.")
         else:
             deductions.append("No professional profiles (LinkedIn or GitHub) detected.")
 
@@ -192,28 +193,40 @@ class ResumeScorer:
 
         combined = (edu_text + " " + full_text).lower()
 
-        # Dedicated section (6 pts)
+        # Dedicated section (4 pts)
         if edu_text.strip():
-            score += 6
+            score += 4
             reasons.append("Distinct Education section found.")
         else:
             deductions.append("No dedicated 'Education' header detected.")
 
-        # Degree identified (5 pts)
+        # Degree identified (4 pts)
         has_degree = any(re.search(pat, combined) for pat in self.DEGREE_PATTERNS)
         if has_degree:
-            score += 5
-            reasons.append("Standard academic qualification or degree mentioned (e.g., Bachelor, Master, B.Tech, B.S.).")
+            score += 4
+            reasons.append("Standard degree qualification recognized (e.g., Bachelor, Master, B.Tech, B.S.).")
         else:
-            deductions.append("No standard degree title (B.Tech, B.S., M.S., Bachelor) clearly recognized.")
+            deductions.append("No standard degree title clearly recognized.")
 
         # Institution identified (4 pts)
         has_institution = any(re.search(pat, combined) for pat in self.INSTITUTION_PATTERNS)
         if has_institution:
             score += 4
-            reasons.append("Educational institution (university/college/institute) detected.")
+            reasons.append("Accredited educational institution detected.")
         else:
             deductions.append("No university or college name clearly identified.")
+
+        # Educational depth / dates / field of study (3 pts)
+        has_dates = bool(re.search(r"\b(20\d{2}|19\d{2})\b", edu_text if edu_text.strip() else full_text))
+        has_field = bool(re.search(r"\b(science|engineering|technology|arts|commerce|mathematics|statistics|computer)\b", combined))
+        if has_dates and has_field:
+            score += 3
+            reasons.append("Complete academic credentials with graduation timeline and field of study.")
+        elif has_dates or has_field:
+            score += 2
+            reasons.append("Basic academic chronology noted.")
+        else:
+            deductions.append("Incomplete academic entry; add graduation year and academic major/specialization.")
 
         status = self._calc_status(score, max_score)
         return {
@@ -232,26 +245,29 @@ class ResumeScorer:
         reasons = []
         deductions = []
 
-        # Skills section presence (6 pts)
+        # Skills section presence (4 pts)
         if skills_text.strip():
-            score += 6
+            score += 4
             reasons.append("Dedicated Technical Skills section detected.")
         else:
             deductions.append("Missing dedicated Skills section.")
 
-        # Skills diversity (up to 14 pts)
+        # Skills diversity and breadth (up to 16 pts)
         skill_count = len(skills_list)
-        if skill_count >= 10:
-            score += 14
-            reasons.append(f"Strong technical breadth: {skill_count} relevant technical skills identified.")
-        elif skill_count >= 6:
-            score += 10
+        if skill_count >= 12:
+            score += 16
+            reasons.append(f"Exceptional technical breadth: {skill_count} relevant technical skills identified.")
+        elif skill_count >= 8:
+            score += 12
+            reasons.append(f"Strong technical breadth: {skill_count} technical skills identified.")
+        elif skill_count >= 5:
+            score += 8
             reasons.append(f"Moderate technical breadth: {skill_count} technical skills identified.")
-            deductions.append("Could expand skill inventory to showcase additional relevant tools and libraries.")
+            deductions.append("Expand skill inventory to cover complementary libraries, databases, and DevOps tools.")
         elif skill_count >= 3:
-            score += 6
-            reasons.append(f"Basic skill listing: {skill_count} skills detected.")
-            deductions.append("Skill coverage is limited. Add primary programming languages, frameworks, and databases.")
+            score += 5
+            reasons.append(f"Basic skill coverage: {skill_count} skills detected.")
+            deductions.append("Skill coverage is limited. Add primary programming languages, frameworks, and tools.")
         else:
             score += 2
             deductions.append("Very few recognized technical skills detected in the document.")
@@ -273,42 +289,51 @@ class ResumeScorer:
         reasons = []
         deductions = []
 
-        target_text = proj_text if proj_text.strip() else full_text
+        target_text = proj_text if proj_text.strip() else ""
+        proj_words = len(re.findall(r"\b\w+\b", target_text))
 
-        # Projects section (6 pts)
+        # Projects section header presence (4 pts)
         if proj_text.strip():
-            score += 6
+            score += 4
             reasons.append("Dedicated Projects section present.")
         else:
             deductions.append("Missing dedicated Projects section; crucial for technical and engineering profiles.")
 
-        # Project richness: bullet points / line count (8 pts)
-        lines = [line.strip() for line in target_text.splitlines() if len(line.strip()) > 20]
-        if len(lines) >= 6:
-            score += 8
-            reasons.append("Substantial project descriptions with multiple feature points.")
-        elif len(lines) >= 3:
-            score += 5
-            reasons.append("Basic project summaries present.")
-            deductions.append("Project descriptions could include more architectural and implementation details.")
+        # Project substance and descriptive richness (up to 10 pts)
+        lines = [line.strip() for line in target_text.splitlines() if len(line.strip()) > 30]
+        if proj_words >= 90 and len(lines) >= 4:
+            score += 10
+            reasons.append(f"In-depth project descriptions with {len(lines)} detailed technical feature points ({proj_words} words).")
+        elif proj_words >= 50 and len(lines) >= 2:
+            score += 7
+            reasons.append(f"Moderate project summaries present ({proj_words} words).")
+            deductions.append("Expand project entries with more architectural context, challenges solved, and design decisions.")
+        elif proj_words >= 25:
+            score += 4
+            reasons.append("Basic project outlines detected.")
+            deductions.append("Project descriptions are brief. Elaborate on feature implementation and system architecture.")
         else:
-            score += 2
-            deductions.append("Very sparse project descriptions. Aim for 2-3 detailed project highlights.")
+            score += 1
+            deductions.append("Sparse or missing project details. Aim for 2-3 substantial technical project highlights.")
 
-        # Tech stack / metrics in projects (6 pts)
-        has_metrics = bool(re.search(r"\b(\d+[\d,]*%?|\$\d+|\d+\+)\b", target_text))
-        has_tech_words = bool(re.search(r"\b(using|built with|implemented|stack|database|api|model)\b", target_text, re.IGNORECASE))
+        # Tech stack keywords and quantifiable metrics (6 pts)
+        has_metrics = bool(re.search(r"\b(\d+[\d,]*%?|\$\d+|\d+\+?\s*(users|queries|requests|latency|fps|accuracy))\b", target_text, re.IGNORECASE))
+        has_tech_words = bool(re.search(r"\b(using|built with|implemented|stack|database|api|model|pipeline|docker|react|pytorch|aws)\b", target_text, re.IGNORECASE))
 
         if has_metrics and has_tech_words:
             score += 6
-            reasons.append("Projects highlight implementation technologies and quantitative results.")
-        elif has_metrics or has_tech_words:
+            reasons.append("Projects effectively highlight implementation technologies and quantitative results.")
+        elif has_tech_words:
             score += 4
             reasons.append("Projects mention technical implementation keywords.")
-            deductions.append("Incorporate more quantifiable metrics (e.g., % latency reduced, users served, accuracy gained).")
+            deductions.append("Add measurable performance metrics (e.g., % latency reduced, query speedup, model accuracy gained).")
+        elif has_metrics:
+            score += 3
+            reasons.append("Projects mention quantitative results.")
+            deductions.append("Explicitly state the technologies, frameworks, and architecture used for each project.")
         else:
             score += 1
-            deductions.append("Projects lack technical implementation context and quantifiable results.")
+            deductions.append("Projects lack technical stack context and quantifiable performance results.")
 
         status = self._calc_status(score, max_score)
         return {
@@ -327,37 +352,51 @@ class ResumeScorer:
         reasons = []
         deductions = []
 
-        # Experience section presence (5 pts)
+        target_text = exp_text if exp_text.strip() else ""
+        exp_words = len(re.findall(r"\b\w+\b", target_text))
+
+        # Experience section presence (3 pts)
         if exp_text.strip():
-            score += 5
+            score += 3
             reasons.append("Dedicated Professional Experience / Work History section present.")
         else:
-            deductions.append("No explicit Experience section found. (If applying as entry-level/fresher, include relevant internships or student leadership).")
+            deductions.append("No explicit Experience section found. (Include internships, contracts, or student leadership if entry-level).")
 
-        target_text = exp_text if exp_text.strip() else full_text
+        # Content substance & depth (up to 4 pts)
+        exp_lines = [line.strip() for line in target_text.splitlines() if len(line.strip()) > 30]
+        if exp_words >= 80 and len(exp_lines) >= 3:
+            score += 4
+            reasons.append(f"Substantial work history descriptions ({exp_words} words across {len(exp_lines)} accomplishment statements).")
+        elif exp_words >= 40:
+            score += 2
+            reasons.append(f"Basic work history descriptions ({exp_words} words).")
+            deductions.append("Deepen work history bullet points with specific responsibilities and business impact.")
+        else:
+            score += 1
+            deductions.append("Work experience section is brief or lacks bulleted accomplishment details.")
 
-        # Job role titles detected (5 pts)
-        roles_found = [role for role in self.ROLE_PATTERNS if re.search(role, target_text, re.IGNORECASE)]
+        eval_text = exp_text if exp_text.strip() else full_text
+
+        # Job role titles detected (4 pts)
+        roles_found = [role for role in self.ROLE_PATTERNS if re.search(role, eval_text, re.IGNORECASE)]
         if len(roles_found) >= 2:
-            score += 5
-            reasons.append("Standard professional job titles identified (e.g., Engineer, Developer, Analyst, Intern).")
+            score += 4
+            reasons.append("Clear professional role titles identified (e.g., Engineer, Developer, Analyst).")
         elif len(roles_found) == 1:
-            score += 3
+            score += 2
             reasons.append("At least one professional role title identified.")
         else:
-            score += 1
             deductions.append("Standard professional job roles or internship titles not clearly identifiable.")
 
-        # Chronology / Dates (5 pts)
-        dates_found = len(re.findall(r"\b(20\d{2}|19\d{2})\b", target_text))
+        # Chronology / Dates (4 pts)
+        dates_found = len(re.findall(r"\b(20\d{2}|19\d{2})\b", eval_text))
         if dates_found >= 2:
-            score += 5
-            reasons.append("Chronological date markers indicating tenure and experience timeline.")
+            score += 4
+            reasons.append("Chronological date markers indicating tenure and professional timeline.")
         elif dates_found == 1:
-            score += 3
+            score += 2
             deductions.append("Limited date markers; clarify employment or project tenure.")
         else:
-            score += 1
             deductions.append("Missing employment date ranges or tenure indicators.")
 
         status = self._calc_status(score, max_score)
@@ -377,39 +416,44 @@ class ResumeScorer:
         reasons = []
         deductions = []
 
-        # Section completeness (5 pts)
+        # Section completeness (4 pts)
         core_sections = {"education", "skills", "projects", "experience"}
         matched_core = core_sections.intersection(set(detected_sections))
         if len(matched_core) >= 4:
-            score += 5
+            score += 4
             reasons.append("All primary structural sections (Education, Skills, Experience, Projects) detected.")
         elif len(matched_core) >= 3:
-            score += 4
+            score += 3
             reasons.append(f"Most essential sections present ({len(matched_core)} of 4).")
             missing = core_sections - matched_core
-            deductions.append(f"Missing core sections: {', '.join(s.title() for s in missing)}.")
+            deductions.append(f"Missing core section: {', '.join(s.title() for s in missing)}.")
         elif len(matched_core) >= 2:
             score += 2
             missing = core_sections - matched_core
             deductions.append(f"Incomplete structure. Missing: {', '.join(s.title() for s in missing)}.")
         else:
             score += 1
-            deductions.append("Unstructured format. Standard headers like Education, Skills, and Projects are missing.")
+            deductions.append("Unstructured format. Missing standard resume headings.")
 
-        # Word count balance (4 pts)
-        if 350 <= word_count <= 850:
-            score += 4
-            reasons.append(f"Optimal resume length ({word_count} words; fits concise 1-2 page standard).")
-        elif 200 <= word_count < 350:
+        # Word count & content depth calibration (5 pts)
+        # Professional standard: 400 - 800 words
+        if 400 <= word_count <= 850:
+            score += 5
+            reasons.append(f"Optimal resume length and depth ({word_count} words; fits industry standard 1-2 pages).")
+        elif 320 <= word_count < 400:
             score += 3
-            reasons.append(f"Concise resume ({word_count} words).")
-            deductions.append("Slightly brief; consider adding more project detail or technical achievements.")
+            reasons.append(f"Moderately concise resume ({word_count} words).")
+            deductions.append("Slightly brief; expand project implementation details and measurable achievements.")
+        elif 200 <= word_count < 320:
+            score += 2
+            reasons.append(f"Short resume ({word_count} words).")
+            deductions.append(f"Document is brief ({word_count} words). Elaborate on technical challenges and impact.")
         elif word_count > 850:
             score += 2
-            deductions.append(f"Resume is on the longer side ({word_count} words). Aim to keep it concise and focused.")
+            deductions.append(f"Resume is on the longer side ({word_count} words). Tighten phrasing to maintain recruiter focus.")
         else:
-            score += 1
-            deductions.append(f"Resume is very brief ({word_count} words). Expand with substantial content.")
+            score += 0
+            deductions.append(f"Resume is very brief ({word_count} words; under 200-word threshold). Lacks substantive depth.")
 
         # Action verbs usage (3 pts)
         text_lower = full_text.lower()
@@ -426,7 +470,7 @@ class ResumeScorer:
             deductions.append("Limited action verbs detected. Passive phrasing reduces recruiter engagement.")
 
         # Quantified impact (3 pts)
-        metrics = re.findall(r"\b(\d+[\d,]*%|\$\d+[\d,]*|\d+\+?\s*(users|clients|requests|ms|seconds|x|gb|tb))\b", text_lower)
+        metrics = re.findall(r"\b(\d+[\d,]*%|\$\d+[\d,]*|\d+\+?\s*(users|clients|requests|ms|seconds|x|gb|tb|accuracy))\b", text_lower)
         if len(metrics) >= 3:
             score += 3
             reasons.append("High quantifiable impact: multiple metrics, percentages, and performance indicators found.")
@@ -435,7 +479,7 @@ class ResumeScorer:
             reasons.append("Some quantifiable metrics present.")
             deductions.append("Add more quantified outcomes (e.g., 'improved query performance by 35%').")
         else:
-            score += 1
+            score += 0
             deductions.append("No quantifiable metrics detected. Use numbers, percentages, and metrics to demonstrate impact.")
 
         status = self._calc_status(score, max_score)

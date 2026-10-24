@@ -9,5 +9,7 @@ services:
         value: 3.11.8
       - key: SECRET_KEY
         generateValue: true
-      - key: FLASK_ENV
-        value: production
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: GROQ_API_KEY
+        sync: false

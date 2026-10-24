@@ -242,14 +242,32 @@ body {
 
 /* Print Styling */
 @media print {
-    nav, footer, .btn-print-hide, .filter-buttons {
+    nav, footer, .btn-print-hide, .filter-buttons, .alert-dismissible {
         display: none !important;
     }
     body {
-        background-color: #ffffff;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
     }
     .card-saas {
         box-shadow: none !important;
-        border: 1px solid #cccccc !important;
+        border: 1px solid #cbd5e1 !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 1.25rem !important;
+    }
+    .rec-card-item {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 0.75rem !important;
+    }
+    /* Ensure background colors, circular gauge, and progress bars print accurately */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 }
