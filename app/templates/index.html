@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Smart Resume Analyzer | Explainable AI & ATS Evaluation{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-gradient py-5">
+    <div class="container text-center py-4">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-semibold mb-3">
+            <i class="bi bi-stars me-1"></i> Intermediate AI Capstone Project
+        </span>
+        <h1 class="display-5 fw-extrabold text-dark tracking-tight mb-3">
+            Smart Resume Analyzer with <span class="text-primary">AI-Based Feedback</span>
+        </h1>
+        <p class="lead text-muted mx-auto col-lg-8 mb-4">
+            Upload your resume in PDF or DOCX format to receive instant, explainable ATS compatibility scores,
+            target-role technical skill matching, and evidence-backed recommendations.
+        </p>
+        <div class="d-flex flex-wrap justify-content-center gap-3">
+            <a href="#upload-section" class="btn btn-primary btn-lg px-4 shadow-sm fw-semibold">
+                <i class="bi bi-upload me-2"></i>Analyze My Resume
+            </a>
+            <a href="#how-it-works" class="btn btn-outline-secondary btn-lg px-4 fw-semibold">
+                <i class="bi bi-info-circle me-2"></i>How It Works
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Main Upload Section -->
+<section id="upload-section" class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card card-saas p-4 p-md-5">
+                    <form id="uploadForm" action="{{ url_for('main.analyze_resume') }}" method="POST" enctype="multipart/form-data">
+                        
+                        <!-- Step 1: Select Target Role -->
+                        <div class="mb-5">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge bg-primary text-white rounded-circle p-2 px-3 fw-bold">1</span>
+                                <h4 class="mb-0 fw-bold">Select Your Target Role</h4>
+                            </div>
+                            <p class="text-muted small mb-4">
+                                The ATS engine will evaluate your technical competencies against this role's benchmark standards.
+                            </p>
+                            
+                            <div class="row g-3">
+                                <!-- Data Analyst -->
+                                <div class="col-md-6 col-lg-3">
+                                    <input type="radio" class="btn-check" name="target_role" id="role_da" value="Data Analyst" checked>
+                                    <label class="role-card-label h-100 d-flex flex-column" for="role_da">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <i class="bi bi-bar-chart-line-fill role-icon text-primary"></i>
+                                            <span class="badge bg-light text-dark border">Role</span>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">Data Analyst</h6>
+                                        <p class="small text-muted mb-0">SQL, Python, Excel, Power BI, Statistics, Tableau.</p>
+                                    </label>
+                                </div>
+
+                                <!-- Web Developer -->
+                                <div class="col-md-6 col-lg-3">
+                                    <input type="radio" class="btn-check" name="target_role" id="role_web" value="Web Developer">
+                                    <label class="role-card-label h-100 d-flex flex-column" for="role_web">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <i class="bi bi-code-slash role-icon text-primary"></i>
+                                            <span class="badge bg-light text-dark border">Role</span>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">Web Developer</h6>
+                                        <p class="small text-muted mb-0">JavaScript, React, Node.js, HTML5/CSS3, Git, REST APIs.</p>
+                                    </label>
+                                </div>
+
+                                <!-- AI Engineer -->
+                                <div class="col-md-6 col-lg-3">
+                                    <input type="radio" class="btn-check" name="target_role" id="role_ai" value="AI Engineer">
+                                    <label class="role-card-label h-100 d-flex flex-column" for="role_ai">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <i class="bi bi-cpu-fill role-icon text-primary"></i>
+                                            <span class="badge bg-light text-dark border">Role</span>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">AI Engineer</h6>
+                                        <p class="small text-muted mb-0">Python, Machine Learning, PyTorch, scikit-learn, NLP, TensorFlow.</p>
+                                    </label>
+                                </div>
+
+                                <!-- Cloud Engineer -->
+                                <div class="col-md-6 col-lg-3">
+                                    <input type="radio" class="btn-check" name="target_role" id="role_cloud" value="Cloud Engineer">
+                                    <label class="role-card-label h-100 d-flex flex-column" for="role_cloud">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <i class="bi bi-cloud-check-fill role-icon text-primary"></i>
+                                            <span class="badge bg-light text-dark border">Role</span>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">Cloud Engineer</h6>
+                                        <p class="small text-muted mb-0">AWS, Docker, Kubernetes, Linux, Terraform, CI/CD pipelines.</p>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Upload Resume File -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge bg-primary text-white rounded-circle p-2 px-3 fw-bold">2</span>
+                                <h4 class="mb-0 fw-bold">Upload Resume File</h4>
+                            </div>
+                            <p class="text-muted small mb-3">
+                                Upload a PDF or Word document (.docx). Max file size: 5 MB. Files are processed securely in memory and deleted immediately after analysis.
+                            </p>
+
+                            <!-- Hidden Native File Input -->
+                            <input type="file" id="resume_file" name="resume_file" class="d-none" accept=".pdf,.docx">
+
+                            <!-- Visual Dropzone -->
+                            <div id="dropzone" class="dropzone-container">
+                                <i class="bi bi-file-earmark-arrow-up dropzone-icon mb-3 d-block"></i>
+                                <h5 class="fw-bold mb-1">Drag and drop your resume file here</h5>
+                                <p class="text-muted small mb-3">or browse from your computer</p>
+                                <div>
+                                    <span class="badge bg-secondary-subtle text-secondary me-2"><i class="bi bi-filetype-pdf me-1"></i>PDF (.pdf)</span>
+                                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-filetype-docx me-1"></i>DOCX (.docx)</span>
+                                </div>
+                            </div>
+
+                            <!-- Selected File Preview Card -->
+                            <div id="filePreview" class="d-none p-3 border rounded-3 bg-white mt-3 shadow-sm d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-primary-subtle text-primary p-3 rounded-3">
+                                        <i class="bi bi-file-earmark-check fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h6 id="fileNameDisplay" class="fw-bold mb-0 text-dark">resume.pdf</h6>
+                                        <span id="fileSizeDisplay" class="text-muted small">0 KB</span>
+                                    </div>
+                                </div>
+                                <button type="button" id="removeFileBtn" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-trash me-1"></i>Change File
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center pt-3">
+                            <button type="submit" id="analyzeBtn" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow" disabled>
+                                <span id="analyzeSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                                <span id="analyzeBtnText"><i class="bi bi-search me-2"></i>Analyze Resume Now</span>
+                            </button>
+                            <p id="statusNotice" class="text-muted small mt-2 d-none fst-italic">
+                                Extracting text and parsing structure...
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Methodology & Architecture Section -->
+<section id="how-it-works" class="py-5 bg-white border-top">
+    <div class="container py-3">
+        <div class="text-center mb-5">
+            <span class="text-primary fw-bold text-uppercase small tracking-wide">Explainable AI Architecture</span>
+            <h2 class="fw-bold mt-1">How The Analysis Engine Works</h2>
+            <p class="text-muted mx-auto col-md-7">
+                Unlike opaque black-box checkers, our multi-stage pipeline delivers fully transparent, reproducible, and explainable evaluations.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
+                    <div class="bg-primary-subtle text-primary rounded-circle mx-auto p-3 mb-3 d-inline-flex">
+                        <i class="bi bi-file-earmark-text fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold">1. Document Parsing</h5>
+                    <p class="text-muted small mb-0">
+                        Extracts layout-independent text via PyMuPDF (PDF) and python-docx. Segmenters detect sections like Education, Experience, Projects, and Skills.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
+                    <div class="bg-primary-subtle text-primary rounded-circle mx-auto p-3 mb-3 d-inline-flex">
+                        <i class="bi bi-diagram-3 fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold">2. NLP Skill Matching</h5>
+                    <p class="text-muted small mb-0">
+                        Scans token n-grams against role benchmarks. Normalizes industry aliases (e.g., K8s &rarr; Kubernetes, ML &rarr; Machine Learning) without false positives.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
+                    <div class="bg-primary-subtle text-primary rounded-circle mx-auto p-3 mb-3 d-inline-flex">
+                        <i class="bi bi-graph-up-arrow fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold">3. TF-IDF & Scoring</h5>
+                    <p class="text-muted small mb-0">
+                        scikit-learn TF-IDF vectorization computes semantic cosine similarity against target profiles. Heuristic scoring transparently grades 6 dimensions out of 100.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
+                    <div class="bg-primary-subtle text-primary rounded-circle mx-auto p-3 mb-3 d-inline-flex">
+                        <i class="bi bi-lightbulb fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold">4. Smart Feedback</h5>
+                    <p class="text-muted small mb-0">
+                        Generates prioritized, evidence-backed recommendations targeting missing skills, weak bullet structures, and formatting gaps. Never fabricates achievements.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Target Roles Details Section -->
+<section id="target-roles" class="py-5">
+    <div class="container py-3">
+        <div class="text-center mb-5">
+            <span class="text-primary fw-bold text-uppercase small tracking-wide">Industry Benchmarks</span>
+            <h2 class="fw-bold mt-1">Supported Target Roles</h2>
+            <p class="text-muted mx-auto col-md-7">
+                Each target role is defined in a separate JSON configuration file with required competencies, recommended tools, and semantic profiles.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card card-saas p-4 h-100">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="bg-primary-subtle text-primary p-3 rounded-3">
+                            <i class="bi bi-bar-chart-line-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Data Analyst</h5>
+                            <span class="badge bg-secondary-subtle text-secondary">Analytics & BI</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        Transforms raw datasets into business strategy through statistical modeling, visualization, and metric tracking.
+                    </p>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge bg-light text-dark border">SQL</span>
+                        <span class="badge bg-light text-dark border">Python</span>
+                        <span class="badge bg-light text-dark border">Excel</span>
+                        <span class="badge bg-light text-dark border">Power BI</span>
+                        <span class="badge bg-light text-dark border">Tableau</span>
+                        <span class="badge bg-light text-dark border">Pandas</span>
+                        <span class="badge bg-light text-dark border">Statistics</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card card-saas p-4 h-100">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="bg-primary-subtle text-primary p-3 rounded-3">
+                            <i class="bi bi-code-slash fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Web Developer</h5>
+                            <span class="badge bg-secondary-subtle text-secondary">Frontend & Backend</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        Builds responsive web applications, secure client-side interfaces, and resilient REST/GraphQL APIs.
+                    </p>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge bg-light text-dark border">JavaScript</span>
+                        <span class="badge bg-light text-dark border">React</span>
+                        <span class="badge bg-light text-dark border">Node.js</span>
+                        <span class="badge bg-light text-dark border">HTML5/CSS3</span>
+                        <span class="badge bg-light text-dark border">Git</span>
+                        <span class="badge bg-light text-dark border">REST API</span>
+                        <span class="badge bg-light text-dark border">TypeScript</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card card-saas p-4 h-100">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="bg-primary-subtle text-primary p-3 rounded-3">
+                            <i class="bi bi-cpu-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">AI Engineer</h5>
+                            <span class="badge bg-secondary-subtle text-secondary">ML / DL / NLP</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        Engineers predictive algorithms, neural networks, computer vision, and NLP transformer workflows.
+                    </p>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge bg-light text-dark border">Python</span>
+                        <span class="badge bg-light text-dark border">Machine Learning</span>
+                        <span class="badge bg-light text-dark border">PyTorch</span>
+                        <span class="badge bg-light text-dark border">TensorFlow</span>
+                        <span class="badge bg-light text-dark border">scikit-learn</span>
+                        <span class="badge bg-light text-dark border">NLP</span>
+                        <span class="badge bg-light text-dark border">MLOps</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card card-saas p-4 h-100">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="bg-primary-subtle text-primary p-3 rounded-3">
+                            <i class="bi bi-cloud-check-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Cloud Engineer</h5>
+                            <span class="badge bg-secondary-subtle text-secondary">DevOps & Infrastructure</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        Designs cloud infrastructure, container orchestration, microservices resilience, and automated CI/CD.
+                    </p>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge bg-light text-dark border">AWS</span>
+                        <span class="badge bg-light text-dark border">Docker</span>
+                        <span class="badge bg-light text-dark border">Kubernetes</span>
+                        <span class="badge bg-light text-dark border">Linux</span>
+                        <span class="badge bg-light text-dark border">Terraform</span>
+                        <span class="badge bg-light text-dark border">CI/CD</span>
+                        <span class="badge bg-light text-dark border">Bash</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

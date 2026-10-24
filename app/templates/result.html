@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard: {{ record.candidate_name }} - {{ record.target_role }} | Smart Resume Analyzer{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --score-val: {{ record.overall_score }};
+        {% if record.overall_score >= 80 %}
+            --score-color: #10b981;
+        {% elif record.overall_score >= 60 %}
+            --score-color: #3b82f6;
+        {% elif record.overall_score >= 40 %}
+            --score-color: #f59e0b;
+        {% else %}
+            --score-color: #ef4444;
+        {% endif %}
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header & Action Bar -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}" class="text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.history') }}" class="text-decoration-none">History</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Analysis Dashboard</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <span>{{ record.candidate_name }}</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-7 rounded-pill">
+                    {{ record.target_role }}
+                </span>
+            </h2>
+            <div class="text-muted small d-flex flex-wrap align-items-center gap-3">
+                <span><i class="bi bi-file-earmark-text me-1"></i>{{ record.filename }}</span>
+                <span><i class="bi bi-type me-1"></i>{{ record.word_count }} words</span>
+                <span><i class="bi bi-clock me-1"></i>{{ record.created_at.strftime('%b %d, %Y - %H:%M') }} UTC</span>
+            </div>
+        </div>
+        <div class="d-flex gap-2 btn-print-hide">
+            <button onclick="window.print()" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                <i class="bi bi-printer"></i> Print / Save PDF
+            </button>
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
+                <i class="bi bi-plus-circle"></i> Analyze Another
+            </a>
+        </div>
+    </div>
+
+    <!-- Top Key Metrics Cards -->
+    <div class="row g-4 mb-4">
+        <!-- 1. Overall Resume Score -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card card-saas p-4 h-100 d-flex flex-column justify-content-between text-center">
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="text-muted small fw-semibold text-uppercase tracking-wider">Overall Resume Score</span>
+                        <span class="badge grade-badge-{{ record.grade }} rounded-pill px-2 py-1 fw-bold">Grade {{ record.grade }}</span>
+                    </div>
+                    <div class="circular-score-wrapper my-2">
+                        <div class="circular-score">
+                            <div class="circular-score-content">
+                                <div class="score-number">{{ record.overall_score }}</div>
+                                <div class="score-total">/ 100</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="fw-bold mb-1 text-dark">{{ record.tier }}</h6>
+                    <p class="small text-muted mb-0">Structural completeness & best practice alignment</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. ATS Role Compatibility -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card card-saas p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="text-muted small fw-semibold text-uppercase tracking-wider">ATS Role Compatibility</span>
+                        <span class="badge bg-primary rounded-pill px-2 py-1">{{ ats.target_role }}</span>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                        <span class="display-5 fw-bold text-dark">{{ ats.ats_score }}%</span>
+                        <span class="text-muted small">Target Alignment</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 10px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ ats.ats_score }}%;" aria-valuenow="{{ ats.ats_score }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                <div class="bg-light p-3 rounded-3 small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Required Skills Match:</span>
+                        <span class="fw-bold">{{ ats.required_matched_count }} / {{ ats.required_skills_count }} ({{ ats.required_match_percentage }}%)</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Recommended Match:</span>
+                        <span class="fw-bold">{{ ats.recommended_matched_count }} / {{ ats.recommended_skills_count }} ({{ ats.recommended_match_percentage }}%)</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Semantic TF-IDF Fit:</span>
+                        <span class="fw-bold text-primary">{{ ats.tfidf_similarity_score }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Candidate Summary & Contact Status -->
+        <div class="col-lg-4 col-md-12">
+            <div class="card card-saas p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase tracking-wider d-block mb-3">Profile Snapshot</span>
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="py-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span class="text-muted"><i class="bi bi-envelope me-2"></i>Email</span>
+                            <span class="fw-semibold text-truncate ms-2" style="max-width: 180px;">{{ record.candidate_email or 'Not Detected' }}</span>
+                        </li>
+                        <li class="py-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span class="text-muted"><i class="bi bi-telephone me-2"></i>Phone</span>
+                            <span class="fw-semibold">{{ scoring.breakdown.contact_info.score >= 4 and 'Detected' or 'Missing' }}</span>
+                        </li>
+                        <li class="py-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span class="text-muted"><i class="bi bi-linkedin me-2"></i>LinkedIn / GitHub</span>
+                            <span class="fw-semibold">{{ scoring.breakdown.contact_info.score >= 12 and 'Present' or 'Incomplete' }}</span>
+                        </li>
+                        <li class="py-2 d-flex align-items-center justify-content-between">
+                            <span class="text-muted"><i class="bi bi-cpu me-2"></i>Total Detected Skills</span>
+                            <span class="badge bg-secondary-subtle text-secondary fw-bold">{{ ats.all_extracted_skills|length }} Skills</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="alert alert-info py-2 px-3 mb-0 small mt-3 border-0 bg-info-subtle text-info-emphasis">
+                    <i class="bi bi-info-circle me-1"></i> Heuristic educational diagnostic tool.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATS Skill Gap Analysis Section -->
+    <div class="card card-saas p-4 mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div>
+                <h4 class="fw-bold mb-0">ATS Skill Gap Analysis</h4>
+                <p class="text-muted small mb-0">
+                    Comparing your resume's technical vocabulary against required skills for <strong>{{ ats.target_role }}</strong>.
+                </p>
+            </div>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                {{ ats.required_matched_count }} of {{ ats.required_skills_count }} Core Skills Matched
+            </span>
+        </div>
+
+        <div class="row g-4 pt-2">
+            <!-- Matched Required Skills -->
+            <div class="col-md-6">
+                <div class="border rounded-3 p-3 h-100 bg-white">
+                    <div class="d-flex align-items-center gap-2 mb-3 text-success">
+                        <i class="bi bi-check-circle-fill fs-5"></i>
+                        <h6 class="fw-bold mb-0 text-dark">Matched Core Skills ({{ ats.matched_required_skills|length }})</h6>
+                    </div>
+                    {% if ats.matched_required_skills %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for skill in ats.matched_required_skills %}
+                                <span class="skill-badge skill-badge-matched">
+                                    <i class="bi bi-check2"></i> {{ skill }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="small text-muted fst-italic mb-0">No core required skills recognized in your resume.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Missing Required Skills -->
+            <div class="col-md-6">
+                <div class="border rounded-3 p-3 h-100 bg-white">
+                    <div class="d-flex align-items-center gap-2 mb-3 text-danger">
+                        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                        <h6 class="fw-bold mb-0 text-dark">Missing Core Skills ({{ ats.missing_required_skills|length }})</h6>
+                    </div>
+                    {% if ats.missing_required_skills %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for skill in ats.missing_required_skills %}
+                                <span class="skill-badge skill-badge-missing">
+                                    <i class="bi bi-x-lg"></i> {{ skill }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="small text-success fw-semibold mb-0">Outstanding! All core role requirements detected.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Matched Recommended Skills -->
+            <div class="col-md-6">
+                <div class="border rounded-3 p-3 h-100 bg-white">
+                    <div class="d-flex align-items-center gap-2 mb-3 text-primary">
+                        <i class="bi bi-stars fs-5"></i>
+                        <h6 class="fw-bold mb-0 text-dark">Matched Secondary Tools ({{ ats.matched_recommended_skills|length }})</h6>
+                    </div>
+                    {% if ats.matched_recommended_skills %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for skill in ats.matched_recommended_skills %}
+                                <span class="skill-badge skill-badge-rec-matched">
+                                    <i class="bi bi-check2"></i> {{ skill }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="small text-muted fst-italic mb-0">No secondary role tools detected.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Missing Recommended Skills -->
+            <div class="col-md-6">
+                <div class="border rounded-3 p-3 h-100 bg-white">
+                    <div class="d-flex align-items-center gap-2 mb-3 text-secondary">
+                        <i class="bi bi-dash-circle fs-5"></i>
+                        <h6 class="fw-bold mb-0 text-dark">Recommended Additional Tools ({{ ats.missing_recommended_skills|length }})</h6>
+                    </div>
+                    {% if ats.missing_recommended_skills %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for skill in ats.missing_recommended_skills %}
+                                <span class="skill-badge skill-badge-rec-missing">
+                                    {{ skill }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="small text-muted mb-0">All recommended industry tools covered.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transparent Score Breakdown Grid (6 Dimensions) -->
+    <div class="card card-saas p-4 mb-4">
+        <div class="mb-3">
+            <h4 class="fw-bold mb-1">Explainable Score Breakdown</h4>
+            <p class="text-muted small mb-0">
+                Transparent mathematical evaluation across 6 foundational resume dimensions totaling 100 points.
+            </p>
+        </div>
+
+        <div class="row g-3 pt-2">
+            {% for key, section in scoring.breakdown.items() %}
+            <div class="col-md-6 col-lg-4">
+                <div class="border rounded-3 p-3 h-100 bg-light d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0 text-dark">{{ section.title }}</h6>
+                            <span class="badge 
+                                {% if section.status == 'Excellent' %}bg-success-subtle text-success border border-success-subtle
+                                {% elif section.status == 'Good' %}bg-primary-subtle text-primary border border-primary-subtle
+                                {% else %}bg-warning-subtle text-warning-emphasis border border-warning-subtle{% endif %}">
+                                {{ section.status }}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Score:</span>
+                            <span class="fw-bold text-dark">{{ section.score }} / {{ section.max_score }} pts</span>
+                        </div>
+                        <div class="progress mb-3" style="height: 6px;">
+                            <div class="progress-bar 
+                                {% if section.percentage >= 80 %}bg-success
+                                {% elif section.percentage >= 60 %}bg-primary
+                                {% else %}bg-warning{% endif %}" 
+                                style="width: {{ section.percentage }}%;"></div>
+                        </div>
+
+                        <!-- Positive reasons -->
+                        {% if section.reasons %}
+                            <div class="mb-2">
+                                <span class="small fw-semibold text-muted d-block mb-1">Strengths:</span>
+                                <ul class="list-unstyled mb-0 small">
+                                    {% for r in section.reasons %}
+                                    <li class="text-success mb-1 d-flex align-items-start gap-1">
+                                        <i class="bi bi-check2-circle flex-shrink-0 mt-1"></i>
+                                        <span class="text-dark">{{ r }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <!-- Deductions -->
+                        {% if section.deductions %}
+                            <div>
+                                <span class="small fw-semibold text-muted d-block mb-1">Areas to Improve:</span>
+                                <ul class="list-unstyled mb-0 small">
+                                    {% for d in section.deductions %}
+                                    <li class="text-danger mb-1 d-flex align-items-start gap-1">
+                                        <i class="bi bi-exclamation-circle flex-shrink-0 mt-1"></i>
+                                        <span class="text-muted">{{ d }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Actionable Smart Recommendations -->
+    <div class="card card-saas p-4 mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <h4 class="fw-bold mb-1">Personalized Improvement Recommendations</h4>
+                <p class="text-muted small mb-0">
+                    Concrete, prioritized steps to elevate your resume. Based strictly on detected patterns without hallucinating qualifications.
+                </p>
+            </div>
+            <!-- Filter buttons -->
+            <div class="filter-buttons btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-dark active rec-filter-btn" data-filter="all">All ({{ recommendations|length }})</button>
+                <button type="button" class="btn btn-outline-secondary rec-filter-btn" data-filter="High">High Priority</button>
+                <button type="button" class="btn btn-outline-secondary rec-filter-btn" data-filter="Medium">Medium</button>
+                <button type="button" class="btn btn-outline-secondary rec-filter-btn" data-filter="Low">Low</button>
+            </div>
+        </div>
+
+        {% if recommendations %}
+            <div class="row g-3" id="recommendationsContainer">
+                {% for rec in recommendations %}
+                <div class="col-12 rec-card-item" data-severity="{{ rec.severity }}">
+                    <div class="card rec-card severity-{{ rec.severity|lower }} p-3 bg-white shadow-sm">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge 
+                                {% if rec.severity == 'High' %}bg-danger text-white
+                                {% elif rec.severity == 'Medium' %}bg-warning text-dark
+                                {% else %}bg-primary-subtle text-primary{% endif %}">
+                                {{ rec.severity }} Priority
+                            </span>
+                            <span class="badge bg-light text-secondary border">{{ rec.category }}</span>
+                            <h6 class="fw-bold mb-0 text-dark ms-1">{{ rec.title }}</h6>
+                        </div>
+                        <div class="row g-2 mt-1 small">
+                            <div class="col-md-6">
+                                <div class="bg-light p-2 rounded-2">
+                                    <span class="fw-semibold text-muted d-block mb-1"><i class="bi bi-search me-1"></i>Evidence Found:</span>
+                                    <p class="mb-0 text-dark">{{ rec.evidence }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="bg-primary-subtle p-2 rounded-2">
+                                    <span class="fw-semibold text-primary d-block mb-1"><i class="bi bi-arrow-right-circle me-1"></i>Recommended Action:</span>
+                                    <p class="mb-0 text-dark">{{ rec.action }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-trophy-fill text-warning fs-1 mb-2 d-block"></i>
+                <h5 class="fw-bold">No High-Priority Deficiencies Found!</h5>
+                <p class="text-muted small">Your resume meets or exceeds all our baseline scoring heuristics for this role.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Heuristic Disclaimer Card -->
+    <div class="card card-saas p-3 bg-light border-0 text-muted small">
+        <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-shield-check text-primary fs-5 flex-shrink-0"></i>
+            <div>
+                <strong class="text-dark">Educational Heuristic Disclaimer:</strong>
+                {{ scoring.disclaimer }}
+                The scores and match percentages displayed above are algorithmic approximations designed for guidance and learning purposes.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

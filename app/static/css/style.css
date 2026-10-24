@@ -1,0 +1,255 @@
+/* Smart Resume Analyzer - Modern SaaS Stylesheet */
+
+:root {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-light: #eef2ff;
+    --dark-bg: #0f172a;
+    --card-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --success-color: #10b981;
+    --success-light: #ecfdf5;
+    --warning-color: #f59e0b;
+    --warning-light: #fffbeb;
+    --danger-color: #ef4444;
+    --danger-light: #fef2f2;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text-main);
+    background-color: #f8fafc;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Brand Icon */
+.brand-icon {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%) !important;
+}
+
+.fs-7 {
+    font-size: 0.75rem;
+}
+
+/* Hero Section */
+.hero-gradient {
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* SaaS Cards */
+.card-saas {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-saas:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+
+/* Role Selector Radios */
+.role-card-label {
+    display: block;
+    cursor: pointer;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    background-color: #ffffff;
+    transition: all 0.2s ease-in-out;
+}
+
+.role-card-label:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+}
+
+.btn-check:checked + .role-card-label {
+    border-color: var(--primary-color);
+    background-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.btn-check:checked + .role-card-label .role-icon {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.role-icon {
+    font-size: 1.5rem;
+    transition: transform 0.2s ease;
+}
+
+/* Dropzone */
+.dropzone-container {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    background-color: #f8fafc;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dropzone-container:hover, .dropzone-container.drag-over {
+    border-color: var(--primary-color);
+    background-color: var(--primary-light);
+}
+
+.dropzone-icon {
+    font-size: 3rem;
+    color: #94a3b8;
+    transition: color 0.2s ease;
+}
+
+.dropzone-container:hover .dropzone-icon,
+.dropzone-container.drag-over .dropzone-icon {
+    color: var(--primary-color);
+}
+
+/* Circular Score Gauge */
+.circular-score-wrapper {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto;
+}
+
+.circular-score {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: conic-gradient(
+        var(--score-color, #4f46e5) calc(var(--score-val, 0) * 1%),
+        #e2e8f0 0
+    );
+}
+
+.circular-score::before {
+    content: '';
+    position: absolute;
+    width: 110px;
+    height: 110px;
+    background-color: #ffffff;
+    border-radius: 50%;
+}
+
+.circular-score-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+
+.score-number {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-main);
+}
+
+.score-total {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+/* Grade Badges */
+.grade-badge-A {
+    background-color: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.grade-badge-B {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+.grade-badge-C {
+    background-color: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.grade-badge-D {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+/* Skill Badges */
+.skill-badge {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 500;
+}
+
+.skill-badge-matched {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.skill-badge-missing {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.skill-badge-rec-matched {
+    background-color: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.skill-badge-rec-missing {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+/* Recommendation Cards */
+.rec-card {
+    border-left: 4px solid #cbd5e1;
+    transition: transform 0.15s ease;
+}
+
+.rec-card.severity-high {
+    border-left-color: #ef4444;
+}
+
+.rec-card.severity-medium {
+    border-left-color: #f59e0b;
+}
+
+.rec-card.severity-low {
+    border-left-color: #3b82f6;
+}
+
+/* Print Styling */
+@media print {
+    nav, footer, .btn-print-hide, .filter-buttons {
+        display: none !important;
+    }
+    body {
+        background-color: #ffffff;
+    }
+    .card-saas {
+        box-shadow: none !important;
+        border: 1px solid #cccccc !important;
+    }
+}

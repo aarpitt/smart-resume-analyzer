@@ -1,0 +1,21 @@
+{
+  "action_verbs": [
+    "accelerated", "achieved", "administered", "analyzed", "architected", "automated",
+    "built", "calculated", "centralized", "championed", "collaborated", "compiled",
+    "configured", "constructed", "converted", "coordinated", "created", "debugged",
+    "decreased", "delivered", "deployed", "designed", "developed", "devised",
+    "diagnosed", "documented", "doubled", "drafted", "engineered", "enhanced",
+    "established", "evaluated", "executed", "expanded", "expedited", "fabricated",
+    "facilitated", "formulated", "generated", "guided", "implemented", "improved",
+    "increased", "initiated", "innovated", "installed", "instituted", "integrated",
+    "investigated", "launched", "lead", "led", "leveraged", "maintained", "managed",
+    "maximized", "mentored", "migrated", "minimized", "modeled", "modernized",
+    "monitored", "negotiated", "optimized", "orchestrated", "organized", "overhauled",
+    "oversaw", "pioneered", "planned", "prepared", "programmed", "published",
+    "quantified", "re-engineered", "rebuilt", "redesigned", "reduced", "refined",
+    "refactored", "remodeled", "reorganized", "resolved", "restructured", "revamped",
+    "scaled", "scheduled", "secured", "simplified", "spearheaded", "standardized",
+    "streamlined", "strengthened", "structured", "supervised", "synthesized", "systematized",
+    "trained", "transformed", "troubleshot", "upgraded", "validated", "verified"
+  ]
+}

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Resume Analyzer | AI-Powered Feedback{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-light d-flex flex-column min-vh-100">
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm py-3">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="{{ url_for('main.index') }}">
+                <span class="brand-icon bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center">
+                    <i class="bi bi-file-earmark-person-fill fs-5"></i>
+                </span>
+                <span class="brand-text">Smart<span class="text-primary-emphasis">Resume</span> <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-7 rounded-pill ms-1">AI</span></span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="{{ url_for('main.index') }}">
+                            <i class="bi bi-cloud-arrow-up me-1"></i> Analyze Resume
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="{{ url_for('main.index') }}#how-it-works">
+                            <i class="bi bi-cpu me-1"></i> Methodology
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="{{ url_for('main.index') }}#target-roles">
+                            <i class="bi bi-briefcase me-1"></i> Target Roles
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="{{ url_for('main.history') }}">
+                            <i class="bi bi-clock-history me-1"></i> My History
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages Container -->
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm border-0 d-flex align-items-center gap-2" role="alert">
+                        {% if category == 'danger' %}
+                            <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                        {% elif category == 'warning' %}
+                            <i class="bi bi-exclamation-circle-fill fs-5 text-warning"></i>
+                        {% elif category == 'success' %}
+                            <i class="bi bi-check-circle-fill fs-5 text-success"></i>
+                        {% else %}
+                            <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
+                        {% endif %}
+                        <div class="flex-grow-1">{{ message }}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content Block -->
+    <main class="flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-top py-4 mt-5 text-muted">
+        <div class="container">
+            <div class="row align-items-center gy-3">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-1 fw-semibold text-dark">Smart Resume Analyzer &copy; 2026</p>
+                    <p class="small mb-0">
+                        Academic AI Capstone Project &bull; Built with Flask, PyMuPDF, python-docx, and scikit-learn.
+                    </p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <span class="badge bg-secondary-subtle text-secondary me-1">PDF & DOCX</span>
+                    <span class="badge bg-secondary-subtle text-secondary me-1">TF-IDF Similarity</span>
+                    <span class="badge bg-secondary-subtle text-secondary me-1">Rule-Based Scoring</span>
+                    <span class="badge bg-secondary-subtle text-secondary">Zero Paid APIs</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

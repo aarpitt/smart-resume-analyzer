@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}My Analysis History | Smart Resume Analyzer{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">My Analysis History</h2>
+            <p class="text-muted small mb-0">
+                All resume evaluations generated in your current private session. Not accessible to other users.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if records %}
+            <form action="{{ url_for('main.clear_history') }}" method="POST" onsubmit="return confirm('Are you sure you want to clear your analysis history?');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-trash me-1"></i> Clear History
+                </button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i> New Analysis
+            </a>
+        </div>
+    </div>
+
+    {% if records %}
+    <div class="card card-saas overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Candidate / File</th>
+                        <th>Target Role</th>
+                        <th>Overall Score</th>
+                        <th>ATS Match</th>
+                        <th>Date & Time</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-text fs-4 text-primary"></i>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ rec.candidate_name }}</div>
+                                    <div class="text-muted small">{{ rec.filename }} ({{ rec.file_type|upper }})</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary-subtle text-secondary border">
+                                {{ rec.target_role }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge grade-badge-{{ rec.grade }} rounded-pill px-2 py-1 fw-bold">
+                                {{ rec.overall_score }} / 100 ({{ rec.grade }})
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold">{{ rec.ats_score }}%</span>
+                                <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                                    <div class="progress-bar bg-primary" style="width: {{ rec.ats_score }}%;"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-muted small">
+                            {{ rec.created_at.strftime('%Y-%m-%d %H:%M') }} UTC
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{{ url_for('main.view_result', analysis_id=rec.analysis_id) }}" class="btn btn-outline-primary btn-sm">
+                                View Report <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card card-saas p-5 text-center">
+        <div class="py-4">
+            <i class="bi bi-folder2-open text-muted fs-1 mb-3 d-block"></i>
+            <h5 class="fw-bold">No Analysis Records Yet</h5>
+            <p class="text-muted small mb-4 col-md-6 mx-auto">
+                You haven't analyzed any resumes during this session yet. Upload a resume to see your scoring reports and recommendations saved here.
+            </p>
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary px-4 fw-semibold">
+                <i class="bi bi-cloud-arrow-up me-2"></i> Upload a Resume
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
