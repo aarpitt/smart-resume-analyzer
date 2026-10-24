@@ -96,7 +96,10 @@ def analyze_resume():
         scoring_result = scorer.score_resume(parsed_data, extracted_skills=all_skills)
 
         # 7. Actionable Smart Feedback
-        feedback_gen = FeedbackGenerator()
+        feedback_gen = FeedbackGenerator(
+            api_key=current_app.config.get("GROQ_API_KEY"),
+            model=current_app.config.get("GROQ_MODEL")
+        )
         recommendations = feedback_gen.generate_recommendations(
             parsed_data, scoring_result, ats_result
         )
