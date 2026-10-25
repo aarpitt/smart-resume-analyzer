@@ -55,9 +55,29 @@ def analyze_resume():
 
     # 1. Validate Target Role
     target_role = request.form.get("target_role", "").strip()
-    if target_role not in ATSAnalyzer.SUPPORTED_ROLES:
+    if target_role not in ATSAnalyzer.ALL_ROLES:
         flash("Please select a valid target job role from the list.", "danger")
         return redirect(url_for("main.index"))
+
+    is_custom_job = (target_role == ATSAnalyzer.CUSTOM_ROLE_KEY)
+    custom_job_title = ""
+    custom_job_description = ""
+
+    if is_custom_job:
+        custom_job_title = request.form.get("custom_job_title", "").strip()
+        custom_job_description = request.form.get("custom_job_description", "").strip()
+
+        if not custom_job_title:
+            flash("Please enter a Target Job Title for Custom Job Analysis.", "warning")
+            return redirect(url_for("main.index"))
+
+        if not custom_job_description or len(custom_job_description.split()) < 30:
+            flash("Please provide a meaningful Job Description (minimum 30 words) for Custom Job Analysis.", "warning")
+            return redirect(url_for("main.index"))
+
+        display_role = custom_job_title[:80]
+    else:
+        display_role = target_role
 
     # 2. Check for Uploaded File
     if "resume_file" not in request.files:
@@ -88,12 +108,29 @@ def analyze_resume():
 
         # 5. ATS Analysis & NLP Skill Extraction
         ats_analyzer = ATSAnalyzer()
-        all_skills = ats_analyzer.extract_all_skills(parsed_data["raw_text"])
-        ats_result = ats_analyzer.analyze_role_compatibility(parsed_data["raw_text"], target_role)
+        if is_custom_job:
+            ats_result = ats_analyzer.analyze_custom_job(
+                resume_text=parsed_data["raw_text"],
+                resume_sections=parsed_data["sections"],
+                job_title=custom_job_title,
+                job_description=custom_job_description,
+                api_key=current_app.config.get("GROQ_API_KEY"),
+                model=current_app.config.get("GROQ_MODEL")
+            )
+            all_skills = ats_result.get("all_extracted_skills", [])
+        else:
+            all_skills = ats_analyzer.extract_all_skills(parsed_data["raw_text"])
+            ats_result = ats_analyzer.analyze_role_compatibility(parsed_data["raw_text"], target_role)
 
         # 6. Heuristic Resume Scoring
         scorer = ResumeScorer()
-        scoring_result = scorer.score_resume(parsed_data, extracted_skills=all_skills)
+        scoring_result = scorer.score_resume(
+            parsed_data,
+            extracted_skills=all_skills,
+            is_custom_job=is_custom_job,
+            target_role=display_role,
+            custom_ats_data=ats_result if is_custom_job else None
+        )
 
         # 7. Actionable Smart Feedback
         feedback_gen = FeedbackGenerator(
@@ -113,7 +150,7 @@ def analyze_resume():
             session_id=session_id,
             filename=raw_filename,
             file_type=file_extension.replace(".", ""),
-            target_role=target_role,
+            target_role=display_role,
             overall_score=scoring_result["overall_score"],
             ats_score=ats_result["ats_score"],
             grade=scoring_result["grade"],

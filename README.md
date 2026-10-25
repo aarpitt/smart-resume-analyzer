@@ -104,18 +104,34 @@ Calculates an explainable score out of 100 across six weighted dimensions:
 | **Structure & Impact** | **15** | 4 core sections (5 pts), Optimal length 350-850 words (4 pts), Action verbs (3 pts), Quantified impact (3 pts) |
 | **Total** | **100** | Letter Grades: **A** (85+), **B** (70-84), **C** (55-69), **D** (<55) |
 
-### Module 3: ATS & NLP Matching Engine (`app/ats_analyzer.py`)
-Supports four primary technical industry roles configured in `app/data/role_skills.json`:
+### Module 3: ATS & NLP Matching Engine (`app/ats_analyzer.py` & `app/custom_job_analyzer.py`)
+Supports two analysis modes:
+
+#### 1. Predefined Technical Roles
+Configured in `app/data/role_skills.json`:
 1. **Data Analyst**
 2. **Web Developer**
 3. **AI Engineer**
 4. **Cloud Engineer**
 
-Key NLP mechanics:
 - **Alias Resolution**: Canonical normalization mapping variations like `reactjs`, `react.js`, `ts`, `py`, `k8s`, `tf`, `gcp`, `mongo` to standard vocabulary.
 - **Set Intersection**: Classifies skills into **Matched Core**, **Missing Core**, **Matched Secondary**, and **Missing Secondary**.
 - **TF-IDF Semantic Similarity**: `TfidfVectorizer(ngram_range=(1,2))` builds n-gram vectors comparing the resume against augmented benchmark job profiles, calculating cosine similarity.
 - **Composite ATS Score**: Weighted combination of 60% Required Match + 20% Recommended Match + 20% Semantic TF-IDF Similarity.
+
+#### 2. Custom Job Description Analysis (`app/custom_job_analyzer.py`)
+Allows users to analyze their resume against **any target job description** across technical and non-technical professions (e.g., *VLSI Design Engineer*, *Mechanical Engineer*, *Project Manager*, *Financial Analyst*, *Marketing Director*):
+- **Groq AI Requirement Extraction**: Parses unstructured job postings into structured JSON schemas (Core Competencies, Preferred Tools, Experience Requirements, Educational Background, Key Responsibilities).
+- **Prompt Injection Defense**: Sanitizes and quotes user-supplied job descriptions as untrusted data boundaries.
+- **Deterministic Rule-Based Fallback**: If Groq is unreachable or credentials are not supplied, the system immediately falls back to regex-based category extraction and TF-IDF n-gram term discovery (`is_fallback: True`).
+- **Competency Verification Depth**:
+  - *Verified in Experience / Projects* (100% weight credit): Demonstrated application in employment history or project work.
+  - *Mentioned in Skills / Summary* (75% weight credit): Listed only in keyword inventory without active accomplishment evidence.
+  - *Missing* (0% credit): Required competency absent from resume text.
+- **Dynamic Weight Redistribution**:
+  - If preferred competencies exist: `60% Core + 20% Preferred + 20% TF-IDF`.
+  - If no preferred competencies in JD: `80% Core + 20% TF-IDF` (fairly reallocates weight rather than penalizing candidate).
+- **Role-Neutral Scoring**: Assesses candidate suitability solely against JD expectations—does not mandate programming skills unless required by the role. A clear disclosure banner is rendered explaining general formatting versus role compatibility.
 
 ### Module 4: Smart Feedback Generator (`app/feedback.py`)
 Produces actionable, prioritized recommendations categorized into **High**, **Medium**, and **Low** severity:
@@ -170,6 +186,7 @@ smart-resume-analyzer/
 │   ├── parser.py             # ResumeParser (PyMuPDF & python-docx, section segmentation)
 │   ├── scoring.py            # ResumeScorer (heuristic 100-pt scoring engine)
 │   ├── ats_analyzer.py       # ATSAnalyzer (skill normalization, TF-IDF cosine similarity)
+│   ├── custom_job_analyzer.py # CustomJobAnalyzer (Groq JD extraction, verified depth, fallback)
 │   ├── feedback.py           # FeedbackGenerator (prioritized actionable recommendations)
 │   ├── data/
 │   │   ├── role_skills.json  # 4 target roles, required/recommended skills & aliases
@@ -194,11 +211,12 @@ smart-resume-analyzer/
 │   ├── sample_data_analyst.pdf
 │   ├── sample_cloud_engineer.pdf
 │   └── sample_weak_resume.docx
-├── tests/                    # Automated test suite (20 tests)
+├── tests/                    # Automated test suite (37 tests)
 │   ├── __init__.py
 │   ├── test_parser.py        # PDF/DOCX text & section extraction tests
 │   ├── test_scoring.py       # 100-pt transparent scoring tests
 │   ├── test_ats.py           # Skill normalization & role-switching tests
+│   ├── test_custom_job.py    # Custom JD extraction, verified depth, non-tech roles & fallbacks
 │   ├── test_feedback.py      # Actionable recommendations & integrity tests
 │   └── test_routes.py        # End-to-end web workflows & privacy tests
 ├── instance/                 # SQLite database storage
@@ -264,7 +282,7 @@ http://127.0.0.1:5000
 
 ## Running Automated Tests
 
-The application includes 20 comprehensive unit and integration tests covering parser extraction, scoring boundaries, ATS alias mapping, role differentiation, and session isolation.
+The application includes 37 comprehensive unit and integration tests covering parser extraction, scoring boundaries, ATS alias mapping, role differentiation, custom job description analysis (Groq AI extraction, verified depth, non-technical professions, equivalent terminology matching, profession-neutral scoring, weight adjustments), session privacy, and error handling.
 
 Execute tests with:
 ```bash
@@ -276,7 +294,24 @@ Expected output:
 tests/test_ats.py::test_alias_normalization PASSED
 tests/test_ats.py::test_role_selection_changes_skill_match_results PASSED
 tests/test_ats.py::test_tfidf_cosine_similarity PASSED
-tests/test_feedback.py::test_feedback_for_weak_resume PASSED
+tests/test_custom_job.py::test_custom_job_rule_based_fallback PASSED
+tests/test_custom_job.py::test_custom_job_api_failure_graceful_fallback PASSED
+tests/test_custom_job.py::test_competency_verification_depth PASSED
+tests/test_custom_job.py::test_formula_weight_reallocation_when_preferred_is_empty PASSED
+tests/test_custom_job.py::test_role_neutral_project_manager PASSED
+tests/test_custom_job.py::test_role_neutral_mechanical_engineer PASSED
+tests/test_custom_job.py::test_role_neutral_financial_analyst PASSED
+tests/test_custom_job.py::test_route_custom_job_short_description_rejected PASSED
+tests/test_custom_job.py::test_route_custom_job_missing_title_rejected PASSED
+tests/test_custom_job.py::test_route_custom_job_successful_analysis PASSED
+tests/test_custom_job.py::test_route_predefined_role_regression_protection PASSED
+tests/test_custom_job.py::test_equivalent_terminology_jira_and_agile_matching PASSED
+tests/test_custom_job.py::test_pm_scoring_not_penalized_for_missing_github_or_programming PASSED
+tests/test_custom_job.py::test_pm_feedback_excludes_irrelevant_tech_and_remains_role_aware PASSED
+tests/test_custom_job.py::test_groq_failure_fallback_remains_role_aware PASSED
+tests/test_feedback.py::test_rule_based_feedback_for_weak_resume PASSED
+tests/test_feedback.py::test_groq_ai_feedback_generation PASSED
+tests/test_feedback.py::test_graceful_fallback_on_api_failure PASSED
 tests/test_feedback.py::test_academic_integrity_no_hallucinated_qualifications PASSED
 tests/test_parser.py::test_parser_pdf_extraction PASSED
 tests/test_parser.py::test_parser_docx_extraction PASSED
@@ -294,7 +329,7 @@ tests/test_routes.py::test_api_endpoint PASSED
 tests/test_scoring.py::test_score_strong_ai_resume PASSED
 tests/test_scoring.py::test_score_weak_resume_produces_lower_score PASSED
 
-============================= 20 passed in ~6s =============================
+============================= 37 passed =============================
 ```
 
 ---

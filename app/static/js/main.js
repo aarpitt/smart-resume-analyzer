@@ -114,7 +114,44 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 3. Recommendation Filter in Dashboard
+    // 3. Custom Job Fields Toggle & Word Counter
+    const roleRadios = document.querySelectorAll('input[name="target_role"]');
+    const customJobFields = document.getElementById("customJobFields");
+    const customTitleInput = document.getElementById("custom_job_title");
+    const customJdInput = document.getElementById("custom_job_description");
+    const jdWordCountBadge = document.getElementById("jdWordCountBadge");
+
+    if (roleRadios.length > 0 && customJobFields) {
+        roleRadios.forEach(radio => {
+            radio.addEventListener("change", function () {
+                if (this.value === "Custom Job Analysis") {
+                    customJobFields.classList.remove("d-none");
+                    if (customTitleInput) customTitleInput.required = true;
+                    if (customJdInput) customJdInput.required = true;
+                } else {
+                    customJobFields.classList.add("d-none");
+                    if (customTitleInput) customTitleInput.required = false;
+                    if (customJdInput) customJdInput.required = false;
+                }
+            });
+        });
+
+        if (customJdInput && jdWordCountBadge) {
+            customJdInput.addEventListener("input", function () {
+                const text = this.value.trim();
+                const words = text ? text.split(/\s+/).length : 0;
+                if (words >= 30) {
+                    jdWordCountBadge.textContent = `${words} words (Requirement met)`;
+                    jdWordCountBadge.className = "badge bg-success-subtle text-success small";
+                } else {
+                    jdWordCountBadge.textContent = `${words} words (min. 30 recommended)`;
+                    jdWordCountBadge.className = "badge bg-secondary-subtle text-secondary small";
+                }
+            });
+        }
+    }
+
+    // 4. Recommendation Filter in Dashboard
     const filterButtons = document.querySelectorAll(".rec-filter-btn");
     const recCards = document.querySelectorAll(".rec-card-item");
 

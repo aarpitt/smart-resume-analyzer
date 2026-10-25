@@ -7,7 +7,7 @@ and scikit-learn TF-IDF semantic profile similarity analysis.
 import json
 import os
 import re
-from typing import Dict, List, Set, Any, Tuple
+from typing import Dict, List, Set, Any, Tuple, Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -27,6 +27,8 @@ class ATSAnalyzer:
         "AI Engineer",
         "Cloud Engineer"
     ]
+    CUSTOM_ROLE_KEY = "Custom Job Analysis"
+    ALL_ROLES = SUPPORTED_ROLES + [CUSTOM_ROLE_KEY]
 
     def __init__(self, config_path: str = None):
         if config_path is None:
@@ -204,3 +206,24 @@ class ATSAnalyzer:
                 "formula_text": f"60% × {round(req_pct, 1)}% ({req_points} pts) + 20% × {round(rec_pct, 1)}% ({rec_points} pts) + 20% × {tfidf_pct}% ({tfidf_points} pts) = {composite_score}%"
             }
         }
+
+    def analyze_custom_job(
+        self,
+        resume_text: str,
+        resume_sections: Dict[str, str],
+        job_title: str,
+        job_description: str,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Delegates custom job description analysis to CustomJobAnalyzer.
+        """
+        from app.custom_job_analyzer import CustomJobAnalyzer
+        analyzer = CustomJobAnalyzer(api_key=api_key, model=model)
+        return analyzer.analyze_custom_compatibility(
+            resume_text=resume_text,
+            resume_sections=resume_sections,
+            job_title=job_title,
+            job_description=job_description
+        )
