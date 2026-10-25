@@ -97,6 +97,45 @@
                                         <p class="small text-muted mb-0">AWS, Docker, Kubernetes, Linux, Terraform, CI/CD pipelines.</p>
                                     </label>
                                 </div>
+
+                                <!-- Custom Job Analysis (Option 5) -->
+                                <div class="col-12 mt-3">
+                                    <input type="radio" class="btn-check" name="target_role" id="role_custom" value="Custom Job Analysis">
+                                    <label class="role-card-label d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3" for="role_custom">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="bg-primary-subtle text-primary p-2 rounded-3">
+                                                <i class="bi bi-file-earmark-text-fill fs-4"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0">Custom Job Analysis (Any Profession)</h6>
+                                                <p class="small text-muted mb-0">Analyze any profession: Project Manager, Mechanical Engineer, Financial Analyst, Marketing, VLSI, etc.</p>
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-primary text-white mt-2 mt-md-0 align-self-start align-self-md-auto">AI Extraction</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Custom Job Input Fields (Revealed when Custom Job Analysis is selected) -->
+                            <div id="customJobFields" class="d-none mt-3 p-3 border rounded-3 bg-light">
+                                <div class="mb-3">
+                                    <label for="custom_job_title" class="form-label fw-bold small text-dark">
+                                        <i class="bi bi-tag-fill me-1 text-primary"></i>Target Job Title <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="custom_job_title" name="custom_job_title" placeholder="e.g. Mechanical Engineer, Senior Project Manager, Financial Analyst, VLSI Designer">
+                                </div>
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label for="custom_job_description" class="form-label fw-bold small text-dark mb-0">
+                                            <i class="bi bi-card-text me-1 text-primary"></i>Job Description Text <span class="text-danger">*</span>
+                                        </label>
+                                        <span id="jdWordCountBadge" class="badge bg-secondary-subtle text-secondary small">0 words (min. 30 recommended)</span>
+                                    </div>
+                                    <textarea class="form-control" id="custom_job_description" name="custom_job_description" rows="5" placeholder="Paste the full job description here, including responsibilities, required qualifications, and preferred competencies..."></textarea>
+                                    <div class="form-text small">
+                                        Our AI engine will extract required competencies, preferred tools, experience, and education directly from this text.
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

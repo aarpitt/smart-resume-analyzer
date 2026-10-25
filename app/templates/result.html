@@ -54,6 +54,9 @@
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-7 rounded-pill">
                     {{ record.target_role }}
                 </span>
+                {% if ats.is_custom_job %}
+                <span class="badge bg-dark text-white fs-7 rounded-pill"><i class="bi bi-briefcase me-1"></i>Custom Analysis</span>
+                {% endif %}
             </h2>
             <div class="text-muted small d-flex flex-wrap align-items-center gap-3">
                 <span><i class="bi bi-file-earmark-text me-1"></i>{{ record.filename }}</span>
@@ -92,7 +95,7 @@
                 </div>
                 <div class="mt-3">
                     <h6 class="fw-bold mb-1 text-dark">{{ record.tier }}</h6>
-                    <p class="small text-muted mb-0">Structural completeness & best practice alignment</p>
+                    <p class="small text-muted mb-0">Structural completeness, clarity & best practices</p>
                 </div>
             </div>
         </div>
@@ -107,7 +110,7 @@
                     </div>
                     <div class="d-flex align-items-baseline gap-2 mb-2">
                         <span class="display-5 fw-bold text-dark">{{ ats.ats_score }}%</span>
-                        <span class="text-muted small">Target Alignment</span>
+                        <span class="text-muted small">Target Alignment ({{ ats.target_role }})</span>
                     </div>
                     <div class="progress mb-3" style="height: 10px;">
                         <div class="progress-bar bg-primary" role="progressbar" style="width: {{ ats.ats_score }}%;" aria-valuenow="{{ ats.ats_score }}" aria-valuemin="0" aria-valuemax="100"></div>
@@ -115,21 +118,23 @@
                 </div>
                 <div class="bg-light p-3 rounded-3 small">
                     <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted">Required Skills Match (60%):</span>
+                        <span class="text-muted">Core Competency Match ({{ ats.weights.required_weight if ats.weights else 60 }}%):</span>
                         <span class="fw-bold">{{ ats.required_matched_count }} / {{ ats.required_skills_count }} ({{ ats.required_match_percentage }}%)</span>
                     </div>
+                    {% if not ats.weights or ats.weights.recommended_weight > 0 %}
                     <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted">Recommended Match (20%):</span>
+                        <span class="text-muted">Secondary / Preferred Match ({{ ats.weights.recommended_weight if ats.weights else 20 }}%):</span>
                         <span class="fw-bold">{{ ats.recommended_matched_count }} / {{ ats.recommended_skills_count }} ({{ ats.recommended_match_percentage }}%)</span>
                     </div>
+                    {% endif %}
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Semantic TF-IDF Fit (20%):</span>
+                        <span class="text-muted">Semantic TF-IDF Fit ({{ ats.weights.tfidf_weight if ats.weights else 20 }}%):</span>
                         <span class="fw-bold text-primary">{{ ats.tfidf_similarity_score }}%</span>
                     </div>
-                    {% if ats.weights %}
+                    {% if ats.weights and ats.weights.formula_text %}
                     <div class="border-top pt-2 text-muted" style="font-size: 0.73rem; line-height: 1.35;">
                         <i class="bi bi-calculator me-1"></i><strong>Calculation:</strong>
-                        <span>60%×{{ ats.required_match_percentage }}% ({{ ats.weights.required_points }} pts) + 20%×{{ ats.recommended_match_percentage }}% ({{ ats.weights.recommended_points }} pts) + 20%×{{ ats.tfidf_similarity_score }}% ({{ ats.weights.tfidf_points }} pts) = <strong class="text-dark">{{ ats.ats_score }}%</strong></span>
+                        <span>{{ ats.weights.formula_text }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -169,17 +174,66 @@
 
     <!-- ATS Skill Gap Analysis Section -->
     <div class="card card-saas p-4 mb-4">
+        {% if ats.is_custom_job and ats.is_fallback %}
+        <div class="alert alert-warning py-2 px-3 mb-3 small d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0"></i>
+            <div><strong>Notice:</strong> Cloud AI was temporarily unreachable. Role requirements were extracted using local heuristic pattern matching and TF-IDF keyword extraction.</div>
+        </div>
+        {% endif %}
+
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
             <div>
                 <h4 class="fw-bold mb-0">ATS Skill Gap Analysis</h4>
                 <p class="text-muted small mb-0">
-                    Comparing your resume's technical vocabulary against required skills for <strong>{{ ats.target_role }}</strong>.
+                    Comparing your resume's qualifications against requirements for <strong>{{ ats.target_role }}</strong> (evaluated independently from general resume quality).
                 </p>
             </div>
             <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                {{ ats.required_matched_count }} of {{ ats.required_skills_count }} Core Skills Matched
+                {{ ats.required_matched_count }} of {{ ats.required_skills_count }} Core Requirements Matched
             </span>
         </div>
+
+        {% if ats.is_custom_job and (ats.key_responsibilities or ats.experience_requirements or ats.educational_requirements) %}
+        <!-- Extracted Job Profile Context for Custom Job -->
+        <div class="card bg-light border-0 p-3 mb-3 small">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="fw-bold text-dark"><i class="bi bi-file-earmark-text me-1 text-primary"></i> Extracted Job Profile Requirements</span>
+                <span class="badge bg-secondary-subtle text-secondary">{{ ats.extraction_source }}</span>
+            </div>
+            <div class="row g-3">
+                {% if ats.key_responsibilities %}
+                <div class="col-md-4">
+                    <strong class="text-muted d-block mb-1"><i class="bi bi-list-check me-1"></i>Key Responsibilities:</strong>
+                    <ul class="ps-3 mb-0 text-dark" style="font-size: 0.8rem;">
+                        {% for resp in ats.key_responsibilities[:3] %}
+                        <li>{{ resp }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% if ats.experience_requirements %}
+                <div class="col-md-4">
+                    <strong class="text-muted d-block mb-1"><i class="bi bi-clock-history me-1"></i>Experience Requirements:</strong>
+                    <ul class="ps-3 mb-0 text-dark" style="font-size: 0.8rem;">
+                        {% for exp in ats.experience_requirements %}
+                        <li>{{ exp }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% if ats.educational_requirements %}
+                <div class="col-md-4">
+                    <strong class="text-muted d-block mb-1"><i class="bi bi-mortarboard me-1"></i>Education Requirements:</strong>
+                    <ul class="ps-3 mb-0 text-dark" style="font-size: 0.8rem;">
+                        {% for edu in ats.educational_requirements %}
+                        <li>{{ edu }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         <div class="row g-4 pt-2">
             <!-- Matched Required Skills -->
@@ -187,9 +241,29 @@
                 <div class="border rounded-3 p-3 h-100 bg-white">
                     <div class="d-flex align-items-center gap-2 mb-3 text-success">
                         <i class="bi bi-check-circle-fill fs-5"></i>
-                        <h6 class="fw-bold mb-0 text-dark">Matched Core Skills ({{ ats.matched_required_skills|length }})</h6>
+                        <h6 class="fw-bold mb-0 text-dark">Matched Core Requirements ({{ ats.matched_required_skills|length }})</h6>
                     </div>
-                    {% if ats.matched_required_skills %}
+                    {% if ats.matched_required_details %}
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            {% for item in ats.matched_required_details %}
+                                {% if 'Verified' in item.evidence %}
+                                    <span class="skill-badge skill-badge-matched" title="{{ item.evidence }}">
+                                        <i class="bi bi-patch-check-fill text-success"></i> {{ item.competency }}
+                                        <span class="badge bg-success-subtle text-success ms-1 py-0 px-1" style="font-size: 0.65rem;">Verified</span>
+                                    </span>
+                                {% else %}
+                                    <span class="skill-badge" style="background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a;" title="{{ item.evidence }}">
+                                        <i class="bi bi-info-circle-fill text-warning"></i> {{ item.competency }}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis ms-1 py-0 px-1" style="font-size: 0.65rem;">Mentioned</span>
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="text-muted mt-2 pt-2 border-top" style="font-size: 0.72rem;">
+                            <span class="text-success fw-semibold"><i class="bi bi-patch-check-fill"></i> Verified:</span> Demonstrated in Experience or Projects (100% credit).
+                            <span class="text-warning-emphasis fw-semibold ms-2"><i class="bi bi-info-circle-fill"></i> Mentioned:</span> Listed in Skills or Summary only (75% credit).
+                        </div>
+                    {% elif ats.matched_required_skills %}
                         <div class="d-flex flex-wrap gap-2">
                             {% for skill in ats.matched_required_skills %}
                                 <span class="skill-badge skill-badge-matched">
@@ -208,7 +282,7 @@
                 <div class="border rounded-3 p-3 h-100 bg-white">
                     <div class="d-flex align-items-center gap-2 mb-3 text-danger">
                         <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-                        <h6 class="fw-bold mb-0 text-dark">Missing Core Skills ({{ ats.missing_required_skills|length }})</h6>
+                        <h6 class="fw-bold mb-0 text-dark">Missing Core Requirements ({{ ats.missing_required_skills|length }})</h6>
                     </div>
                     {% if ats.missing_required_skills %}
                         <div class="d-flex flex-wrap gap-2">
@@ -219,7 +293,7 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="small text-success fw-semibold mb-0">Outstanding! All core role requirements detected.</p>
+                        <p class="small text-success fw-semibold mb-0">Outstanding! All core requirements detected.</p>
                     {% endif %}
                 </div>
             </div>
@@ -229,9 +303,11 @@
                 <div class="border rounded-3 p-3 h-100 bg-white">
                     <div class="d-flex align-items-center gap-2 mb-3 text-primary">
                         <i class="bi bi-stars fs-5"></i>
-                        <h6 class="fw-bold mb-0 text-dark">Matched Secondary Tools ({{ ats.matched_recommended_skills|length }})</h6>
+                        <h6 class="fw-bold mb-0 text-dark">Matched Secondary / Preferred ({{ ats.matched_recommended_skills|length }})</h6>
                     </div>
-                    {% if ats.matched_recommended_skills %}
+                    {% if ats.is_custom_job and ats.recommended_skills_count == 0 %}
+                        <p class="small text-muted fst-italic mb-0">No secondary or preferred competencies specified in the job description (score weight automatically redistributed to core competencies).</p>
+                    {% elif ats.matched_recommended_skills %}
                         <div class="d-flex flex-wrap gap-2">
                             {% for skill in ats.matched_recommended_skills %}
                                 <span class="skill-badge skill-badge-rec-matched">
@@ -240,7 +316,7 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="small text-muted fst-italic mb-0">No secondary role tools detected.</p>
+                        <p class="small text-muted fst-italic mb-0">No secondary competencies detected.</p>
                     {% endif %}
                 </div>
             </div>
@@ -250,9 +326,11 @@
                 <div class="border rounded-3 p-3 h-100 bg-white">
                     <div class="d-flex align-items-center gap-2 mb-3 text-secondary">
                         <i class="bi bi-dash-circle fs-5"></i>
-                        <h6 class="fw-bold mb-0 text-dark">Recommended Additional Tools ({{ ats.missing_recommended_skills|length }})</h6>
+                        <h6 class="fw-bold mb-0 text-dark">Recommended Additional / Preferred ({{ ats.missing_recommended_skills|length }})</h6>
                     </div>
-                    {% if ats.missing_recommended_skills %}
+                    {% if ats.is_custom_job and ats.recommended_skills_count == 0 %}
+                        <p class="small text-muted mb-0">No optional tools required by this custom job description.</p>
+                    {% elif ats.missing_recommended_skills %}
                         <div class="d-flex flex-wrap gap-2">
                             {% for skill in ats.missing_recommended_skills %}
                                 <span class="skill-badge skill-badge-rec-missing">
@@ -276,6 +354,15 @@
                 Transparent mathematical evaluation across 6 foundational resume dimensions totaling 100 points.
             </p>
         </div>
+
+        {% if ats.is_custom_job %}
+        <div class="alert alert-light border border-info-subtle bg-info-subtle bg-opacity-25 py-2 px-3 mb-3 small d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle-fill text-info flex-shrink-0"></i>
+            <div>
+                <strong>Role-Neutral Disclosure:</strong> The general resume score and <strong>Professional Competencies</strong> dimension evaluate universal formatting, structural sections, and competency inventory breadth across all professions. In contrast, <strong>ATS Role Compatibility</strong> strictly measures exact alignment against the specific core requirements and keywords for <strong>{{ ats.target_role }}</strong>. Users should note that a resume can achieve a high overall quality score (Grade A/B) while receiving a lower job compatibility score if specific core requirements for this target position are unevidenced.
+            </div>
+        </div>
+        {% endif %}
 
         <div class="row g-3 pt-2">
             {% for key, section in scoring.breakdown.items() %}

@@ -9,7 +9,7 @@ Note: Scores are illustrative educational heuristics, not definitive claims abou
 import json
 import os
 import re
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 
 class ResumeScorer:
@@ -69,9 +69,18 @@ class ResumeScorer:
                 pass
         return ["developed", "built", "designed", "created", "analyzed", "implemented", "optimized"]
 
-    def score_resume(self, parsed_data: Dict[str, Any], extracted_skills: List[str] = None) -> Dict[str, Any]:
+    def score_resume(
+        self,
+        parsed_data: Dict[str, Any],
+        extracted_skills: List[str] = None,
+        is_custom_job: bool = False,
+        target_role: Optional[str] = None,
+        custom_ats_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Calculates the transparent score breakdown across the 6 dimensions.
+        When is_custom_job=True, evaluations are profession-neutral and adapt to the
+        target role requirements rather than demanding software/DevOps libraries.
         """
         raw_text = parsed_data.get("raw_text", "")
         contact_info = parsed_data.get("contact_info", {})
@@ -80,10 +89,10 @@ class ResumeScorer:
         word_count = parsed_data.get("word_count", 0)
         skills_list = extracted_skills or []
 
-        contact_score = self._score_contact(contact_info)
+        contact_score = self._score_contact(contact_info, is_custom_job=is_custom_job)
         education_score = self._score_education(sections.get("education", ""), raw_text)
-        skills_score = self._score_skills(sections.get("skills", ""), skills_list)
-        projects_score = self._score_projects(sections.get("projects", ""), raw_text)
+        skills_score = self._score_skills(sections.get("skills", ""), skills_list, is_custom_job=is_custom_job, custom_ats_data=custom_ats_data)
+        projects_score = self._score_projects(sections.get("projects", ""), raw_text, is_custom_job=is_custom_job)
         experience_score = self._score_experience(sections.get("experience", ""), raw_text)
         structure_score = self._score_structure(raw_text, detected_sections, word_count)
 
@@ -126,7 +135,7 @@ class ResumeScorer:
             }
         }
 
-    def _score_contact(self, contact: Dict[str, Any]) -> Dict[str, Any]:
+    def _score_contact(self, contact: Dict[str, Any], is_custom_job: bool = False) -> Dict[str, Any]:
         max_score = 15
         score = 0
         reasons = []
@@ -158,13 +167,25 @@ class ResumeScorer:
             links_found += 1
             reasons.append("Portfolio link present.")
 
-        if links_found >= 2:
-            score += 4
-        elif links_found == 1:
-            score += 2
-            deductions.append("Only one professional link provided; including both LinkedIn and GitHub strengthens technical profiles.")
+        if is_custom_job:
+            # For custom / profession-neutral roles, LinkedIn or a professional website is standard.
+            # GitHub is not required for non-software roles.
+            if contact.get("linkedin") or contact.get("portfolio"):
+                score += 4
+                if not any("LinkedIn" in r or "Portfolio" in r for r in reasons):
+                    reasons.append("Professional profile link present.")
+            elif links_found >= 1:
+                score += 4
+            else:
+                deductions.append("No professional profile link (such as LinkedIn) detected.")
         else:
-            deductions.append("No professional profiles (LinkedIn or GitHub) detected.")
+            if links_found >= 2:
+                score += 4
+            elif links_found == 1:
+                score += 2
+                deductions.append("Only one professional link provided; including both LinkedIn and GitHub strengthens technical profiles.")
+            else:
+                deductions.append("No professional profiles (LinkedIn or GitHub) detected.")
 
         # Candidate name (2 pts)
         if contact.get("name") and contact.get("name") != "Candidate":
@@ -239,42 +260,79 @@ class ResumeScorer:
             "deductions": deductions
         }
 
-    def _score_skills(self, skills_text: str, skills_list: List[str]) -> Dict[str, Any]:
+    def _score_skills(
+        self,
+        skills_text: str,
+        skills_list: List[str],
+        is_custom_job: bool = False,
+        custom_ats_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         max_score = 20
         score = 0
         reasons = []
         deductions = []
 
+        title = "Professional Competencies" if is_custom_job else "Technical Skills Section"
+
         # Skills section presence (4 pts)
         if skills_text.strip():
             score += 4
-            reasons.append("Dedicated Technical Skills section detected.")
+            reasons.append("Dedicated Competencies / Skills section detected." if is_custom_job else "Dedicated Technical Skills section detected.")
         else:
-            deductions.append("Missing dedicated Skills section.")
+            deductions.append("Missing dedicated Skills / Competencies section.")
 
-        # Skills diversity and breadth (up to 16 pts)
-        skill_count = len(skills_list)
-        if skill_count >= 12:
-            score += 16
-            reasons.append(f"Exceptional technical breadth: {skill_count} relevant technical skills identified.")
-        elif skill_count >= 8:
-            score += 12
-            reasons.append(f"Strong technical breadth: {skill_count} technical skills identified.")
-        elif skill_count >= 5:
-            score += 8
-            reasons.append(f"Moderate technical breadth: {skill_count} technical skills identified.")
-            deductions.append("Expand skill inventory to cover complementary libraries, databases, and DevOps tools.")
-        elif skill_count >= 3:
-            score += 5
-            reasons.append(f"Basic skill coverage: {skill_count} skills detected.")
-            deductions.append("Skill coverage is limited. Add primary programming languages, frameworks, and tools.")
+        # Extract items listed in the resume skills section directly (comma, semicolon, bullet separated)
+        parsed_section_items = [
+            item.strip() for item in re.split(r"[,;•\n\r|/]+", skills_text)
+            if 2 <= len(item.strip()) <= 45
+        ]
+        total_unique_skills = len(set(skills_list + parsed_section_items))
+
+        if is_custom_job:
+            # Profession-neutral scoring: evaluates alignment with custom requirements and competency inventory
+            req_pct = custom_ats_data.get("required_match_percentage", 0) if custom_ats_data else 0
+            req_matched = custom_ats_data.get("required_matched_count", 0) if custom_ats_data else 0
+
+            if (req_pct >= 75 or req_matched >= 4):
+                score += 16
+                reasons.append(f"Exceptional competency coverage: candidate demonstrated key requirements for this profession.")
+            elif total_unique_skills >= 8:
+                score += 16
+                reasons.append(f"Broad general competency inventory: {total_unique_skills} competencies documented across resume (evaluates overall professional breadth, separate from specific target job keyword coverage).")
+            elif (req_pct >= 50 or req_matched >= 3) or total_unique_skills >= 5:
+                score += 12
+                reasons.append(f"Strong competency coverage matching target job requirements ({total_unique_skills} competencies documented).")
+            elif (req_pct >= 25 or req_matched >= 2) or total_unique_skills >= 3:
+                score += 8
+                reasons.append(f"Moderate competency coverage ({total_unique_skills} competencies detected).")
+                deductions.append("Expand competency section to cover additional core methods and qualifications from the job description.")
+            else:
+                score += 4
+                deductions.append("Limited competency coverage matching the supplied job description.")
         else:
-            score += 2
-            deductions.append("Very few recognized technical skills detected in the document.")
+            # Standard predefined technical role scoring
+            skill_count = len(skills_list)
+            if skill_count >= 12:
+                score += 16
+                reasons.append(f"Exceptional technical breadth: {skill_count} relevant technical skills identified.")
+            elif skill_count >= 8:
+                score += 12
+                reasons.append(f"Strong technical breadth: {skill_count} technical skills identified.")
+            elif skill_count >= 5:
+                score += 8
+                reasons.append(f"Moderate technical breadth: {skill_count} technical skills identified.")
+                deductions.append("Expand skill inventory to cover complementary libraries, databases, and DevOps tools.")
+            elif skill_count >= 3:
+                score += 5
+                reasons.append(f"Basic skill coverage: {skill_count} skills detected.")
+                deductions.append("Skill coverage is limited. Add primary programming languages, frameworks, and tools.")
+            else:
+                score += 2
+                deductions.append("Very few recognized technical skills detected in the document.")
 
         status = self._calc_status(score, max_score)
         return {
-            "title": "Technical Skills Section",
+            "title": title,
             "score": score,
             "max_score": max_score,
             "percentage": round((score / max_score) * 100),
@@ -283,11 +341,13 @@ class ResumeScorer:
             "deductions": deductions
         }
 
-    def _score_projects(self, proj_text: str, full_text: str) -> Dict[str, Any]:
+    def _score_projects(self, proj_text: str, full_text: str, is_custom_job: bool = False) -> Dict[str, Any]:
         max_score = 20
         score = 0
         reasons = []
         deductions = []
+
+        title = "Projects & Key Initiatives" if is_custom_job else "Projects & Portfolio"
 
         target_text = proj_text if proj_text.strip() else ""
         proj_words = len(re.findall(r"\b\w+\b", target_text))
@@ -295,49 +355,66 @@ class ResumeScorer:
         # Projects section header presence (4 pts)
         if proj_text.strip():
             score += 4
-            reasons.append("Dedicated Projects section present.")
+            reasons.append("Dedicated Projects / Initiatives section present." if is_custom_job else "Dedicated Projects section present.")
         else:
-            deductions.append("Missing dedicated Projects section; crucial for technical and engineering profiles.")
+            deductions.append("Missing dedicated Projects or Initiatives section; valuable for showcasing applied results." if is_custom_job else "Missing dedicated Projects section; crucial for technical and engineering profiles.")
 
         # Project substance and descriptive richness (up to 10 pts)
         lines = [line.strip() for line in target_text.splitlines() if len(line.strip()) > 30]
         if proj_words >= 90 and len(lines) >= 4:
             score += 10
-            reasons.append(f"In-depth project descriptions with {len(lines)} detailed technical feature points ({proj_words} words).")
+            reasons.append(f"In-depth project descriptions with {len(lines)} detailed feature/initiative points ({proj_words} words).")
         elif proj_words >= 50 and len(lines) >= 2:
             score += 7
             reasons.append(f"Moderate project summaries present ({proj_words} words).")
-            deductions.append("Expand project entries with more architectural context, challenges solved, and design decisions.")
+            deductions.append("Expand project entries with more context on goals, scope, and strategic decisions." if is_custom_job else "Expand project entries with more architectural context, challenges solved, and design decisions.")
         elif proj_words >= 25:
             score += 4
             reasons.append("Basic project outlines detected.")
-            deductions.append("Project descriptions are brief. Elaborate on feature implementation and system architecture.")
+            deductions.append("Project descriptions are brief. Elaborate on project scope, methodology, and delivered results." if is_custom_job else "Project descriptions are brief. Elaborate on feature implementation and system architecture.")
         else:
             score += 1
-            deductions.append("Sparse or missing project details. Aim for 2-3 substantial technical project highlights.")
+            deductions.append("Sparse or missing project details. Aim for 2-3 substantial project or initiative highlights." if is_custom_job else "Sparse or missing project details. Aim for 2-3 substantial technical project highlights.")
 
-        # Tech stack keywords and quantifiable metrics (6 pts)
-        has_metrics = bool(re.search(r"\b(\d+[\d,]*%?|\$\d+|\d+\+?\s*(users|queries|requests|latency|fps|accuracy))\b", target_text, re.IGNORECASE))
-        has_tech_words = bool(re.search(r"\b(using|built with|implemented|stack|database|api|model|pipeline|docker|react|pytorch|aws)\b", target_text, re.IGNORECASE))
+        # Methodology / tech stack keywords and quantifiable metrics (6 pts)
+        has_metrics = bool(re.search(r"\b(\d+[\d,]*%?|\$\d+|\d+\+?\s*(users|queries|requests|latency|fps|accuracy|teams|members|clients|projects|budgets|stakeholders|deliverables|cost|savings))\b", target_text, re.IGNORECASE))
 
-        if has_metrics and has_tech_words:
-            score += 6
-            reasons.append("Projects effectively highlight implementation technologies and quantitative results.")
-        elif has_tech_words:
-            score += 4
-            reasons.append("Projects mention technical implementation keywords.")
-            deductions.append("Add measurable performance metrics (e.g., % latency reduced, query speedup, model accuracy gained).")
-        elif has_metrics:
-            score += 3
-            reasons.append("Projects mention quantitative results.")
-            deductions.append("Explicitly state the technologies, frameworks, and architecture used for each project.")
+        if is_custom_job:
+            has_domain_methods = bool(re.search(r"\b(managed|directed|delivered|executed|led|facilitated|budget|schedule|agile|scrum|kanban|pmp|stakeholder|implemented|designed|analyzed|developed|system|process)\b", target_text, re.IGNORECASE))
+            if has_metrics and has_domain_methods:
+                score += 6
+                reasons.append("Projects effectively highlight applied methodologies and quantitative deliverables.")
+            elif has_domain_methods:
+                score += 4
+                reasons.append("Projects describe professional methodologies and leadership.")
+                deductions.append("Include quantifiable business outcomes or delivery metrics (e.g., budget scale, schedule efficiency, team size) to substantiate impact.")
+            elif has_metrics:
+                score += 3
+                reasons.append("Projects mention quantitative outcomes.")
+                deductions.append("Explicitly state the tools, governance methods, and frameworks utilized for each project.")
+            else:
+                score += 1
+                deductions.append("Projects lack methodology details and quantifiable performance results.")
         else:
-            score += 1
-            deductions.append("Projects lack technical stack context and quantifiable performance results.")
+            has_tech_words = bool(re.search(r"\b(using|built with|implemented|stack|database|api|model|pipeline|docker|react|pytorch|aws)\b", target_text, re.IGNORECASE))
+            if has_metrics and has_tech_words:
+                score += 6
+                reasons.append("Projects effectively highlight implementation technologies and quantitative results.")
+            elif has_tech_words:
+                score += 4
+                reasons.append("Projects mention technical implementation keywords.")
+                deductions.append("Add measurable performance metrics (e.g., % latency reduced, query speedup, model accuracy gained).")
+            elif has_metrics:
+                score += 3
+                reasons.append("Projects mention quantitative results.")
+                deductions.append("Explicitly state the technologies, frameworks, and architecture used for each project.")
+            else:
+                score += 1
+                deductions.append("Projects lack technical stack context and quantifiable performance results.")
 
         status = self._calc_status(score, max_score)
         return {
-            "title": "Projects & Portfolio",
+            "title": title,
             "score": score,
             "max_score": max_score,
             "percentage": round((score / max_score) * 100),
